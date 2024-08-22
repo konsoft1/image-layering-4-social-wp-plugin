@@ -1,0 +1,154 @@
+/* gallery */
+.user-posts {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4%;
+}
+
+.post-item {
+    margin-bottom: 70px;
+    width: 22%;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 2px 2px 4px 0 #00000036;
+}
+
+@media screen and (max-width: 1500px) {
+    .user-posts {
+        gap: 5%;
+    }
+    .post-item {
+        width: 30%;
+    }
+}
+
+@media screen and (max-width: 1024px) {
+    .user-posts {
+        gap: 6%;
+    }
+    .post-item {
+        width: 44%;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .user-posts {
+        gap: 0;
+    }
+    .post-item {
+        width: 100%;
+    }
+}
+
+.post-thumbnail {
+    display: flex;
+}
+
+.post-thumbnail img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+    background: wheat;
+}
+
+.post-title {
+    font-family: var(--wp--preset--font-family--body);
+    text-overflow: ellipsis;
+    text-wrap: nowrap;
+    overflow: hidden;
+    display: block;
+    font-size: 20px;
+    font-weight: 500;
+    padding: 16px 20px 12px;
+    margin: 0;
+}
+
+.post-content {
+    display: flex;
+}
+
+.post-images {
+    display: flex;
+    gap: 5px;
+    width: 30%;
+    flex-direction: column;
+}
+
+.post-images img {
+    width: 100%;
+    height: auto;
+    flex-grow: 0;
+    background: wheat;
+}
+
+.post-images img:first-child {
+    border-top-right-radius: 8px;
+}
+
+/* .post-images span {
+    flex-grow: 0;
+    font-size: xxx-large;
+    color: gray;
+} */
+
+.post-excerpt {
+    display: flex;
+    flex-grow: 1;
+    width: 0;
+    flex-direction: column;
+}
+
+.post-excerpt p {
+    margin: 0;
+    flex-grow: 1;
+    padding: 5px 20px;
+}
+
+.post-controls {
+    display: flex;
+    flex-grow: 0;
+    justify-content: space-evenly;
+    margin: 10px 14px 20px;
+    gap: 10px;
+}
+
+.post-controls a {
+    color: var(--wp--preset--color--contrast);
+    text-decoration: none;
+    background: #c9e6ef;
+    padding: 2px 9px;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: .3s;
+    cursor: pointer;
+    flex-grow: 1;
+    min-width: fit-content;
+    width: 0;
+    text-align: center;
+}
+
+.post-controls a:hover {
+    background: #aaa;
+}
+
+/* pagenation */
+.pagination-container {
+    text-align: center;
+}
+
+.pagination-container span {
+    background-color: gray;
+    width: 20px;
+    color: white;
+    display: inline-block;
+}
+
+.pagination-container a {
+    margin-left: 5px;
+    margin-right: 5px;
+}

@@ -1,0 +1,115 @@
+#drag-and-drop-container {
+    margin: 30px 0;
+    position: relative;
+}
+
+.drag-and-drop-wrapper {
+    flex-grow: 1;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+}
+
+#drag-and-drop-wrapper2 {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20%;
+}
+
+.drag-and-drop-wrapper::before {
+    content: "";
+    display: block;
+    padding-top: 100%; /* This creates a square aspect ratio */
+}
+
+#drag-and-drop-wrapper2::before {
+    padding-top: 100%; /* This creates a square aspect ratio */
+}
+
+.drag-and-drop-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+}
+
+.drag-and-drop-area.dragging {
+    background-color: #e9e9e9;
+}
+
+.drag-and-drop-area .explain {
+    flex-grow: 1;
+}
+
+#drag-and-drop-area1 .explain span {
+    font-size: xx-large;
+}
+
+#drag-and-drop-area2 .explain {
+    font-size: 12px;
+}
+
+#drag-and-drop-area2 .explain span {
+    font-size: large;
+}
+
+@media screen and (max-width: 560px) {
+    #drag-and-drop-area2 .explain {
+        font-size: 8px;
+    }
+    
+    #drag-and-drop-area2 .explain span {
+        font-size: larger;
+    }
+}
+
+.image-preview-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 7px;
+    overflow: hidden;
+}
+
+.image-preview-container img {
+    width: 100%;
+    height: 100%;
+}
+
+#image-preview-container1 img {
+    object-fit: cover;
+}
+
+#image-preview-container2 img {
+    object-position: top left;
+    object-fit: contain;
+}
+
+#upload-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #0073aa;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    display: block;
+}
+
+#upload-btn:hover {
+    background-color: #005f8d;
+}
+
+#upload-btn:disabled {
+    background-color: gray;
+}
