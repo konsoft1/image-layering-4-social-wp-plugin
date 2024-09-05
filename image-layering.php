@@ -2,35 +2,38 @@
 /*
 Plugin Name: Image Layering
 Description: Allows users to upload images and synthesizing them from the frontend.
-Version: 1.0
+Version: 2.0
 Author: yuari@konsoft
 */
-
-use function Avifinfo\read;
 
 function image_layering_form_shortcode()
 {
     ob_start();
 ?>
     <form id="user-post-form" action="" method="post" enctype="multipart/form-data">
-        <div id="drag-and-drop-container">
-            <div class="drag-and-drop-wrapper">
-                <div id="drag-and-drop-area1" class="drag-and-drop-area">
-                    <span class="explain"><span><b>Background</b>(.jpg)<br>(1000x1000)</span><br>Drag &amp; Drop<br>or<br>Click</span>
-                    <div id="image-preview-container1" class="image-preview-container"></div>
+        <div id="image-edit-container">
+            <div id="drag-and-drop-container">
+                <div id="image-preview-container0" class="image-preview-container"></div>
+                <div id="drag-and-drop-wrapper1" class="drag-and-drop-wrapper">
+                    <div id="drag-and-drop-area1" class="drag-and-drop-area">
+                        <!-- <span class="explain"><span><b>Background</b>(.jpg)<br>(1000x1000)</span><br>Drag &amp; Drop<br>or<br>Click</span> -->
+                        <div id="image-preview-container1" class="image-preview-container"></div>
+                    </div>
+                    <input type="file" id="image_file1" class="image_file" name="image_file" style="display: none;" accept="image/jpeg">
                 </div>
-                <input type="file" id="image_file1" class="image_file" name="image_file" style="display: none;" accept="image/jpeg">
-            </div>
-            <div id="drag-and-drop-wrapper2" class="drag-and-drop-wrapper">
-                <div id="drag-and-drop-area2" class="drag-and-drop-area">
-                    <span class="explain"><span><b>Logo</b>(.png)<br>(200x300)</span><br>Drag &amp; Drop<br>or<br>Click</span>
-                    <div id="image-preview-container2" class="image-preview-container"></div>
+                <div id="drag-and-drop-wrapper2" class="drag-and-drop-wrapper">
+                    <div id="drag-and-drop-area2" class="drag-and-drop-area">
+                        <span class="explain"><span><b>Logo</b>(.png)<br>(200x200)</span><br>Drag &amp; Drop<br>or<br>Click</span>
+                        <div id="image-preview-container2" class="image-preview-container"></div>
+                    </div>
+                    <input type="file" id="image_file2" class="image_file" name="logo_file" style="display: none;" accept="image/png">
                 </div>
-                <input type="file" id="image_file2" class="image_file" name="logo_file" style="display: none;" accept="image/png">
+                <input id="brand-promise-input" type="text" class="" placeholder="Input Brand Promise">
+                <span id="category-name-ribbon">Category Name</span>
+                <button id="next-step-btn">Next Step ></button>
             </div>
+            <div id="bg-sel-container"></div>
         </div>
-
-        <button id="upload-btn">Upload Images</button>
 
         <?php wp_nonce_field('user_post_action', 'user_post_nonce'); ?>
     </form>
@@ -52,6 +55,138 @@ function enqueue_uploader_scripts()
 }
 add_action('wp_enqueue_scripts', 'enqueue_uploader_scripts');
 
+// handle logo upload
+function handle_logo_upload_ajax()
+{
+    // Verify nonce for security
+    if (!check_ajax_referer('custom-ajax-nonce', 'nonce'))
+        die;
+
+    // Include necessary files for media handling
+    if (!function_exists('wp_handle_upload')) {
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+    }
+
+    // Handle file uploads
+    if (!empty($_FILES["image_files"]['name'][0])) {
+        //$file = $_FILES["image_files"][0];
+        $file = [
+            'name' => $_FILES["image_files"]['name'][0],
+            'type' => $_FILES["image_files"]['type'][0],
+            'tmp_name' => $_FILES["image_files"]['tmp_name'][0],
+            'error' => $_FILES["image_files"]['error'][0],
+            'size' => $_FILES["image_files"]['size'][0],
+        ];
+
+        // Check for upload errors
+        if ($file['error'] !== 0) {
+            $upload_errors[] = "Error uploading file." . $file['error'];
+            echo "Error uploading file." . $file['error'] . '<br>';
+            die;
+        }
+
+        $upload = wp_handle_upload($file, array('test_form' => false));
+        if (isset($upload['error'])) {
+            $upload_errors[] = "Error uploading file: " . $upload['error'];
+        } else {
+            $pngLogo = resize_image_to_fit($upload['file'], 200, 200, 0);
+            //modulate($jpgImage, 1.15, 2.37, 142);
+            $dominantColors = extractDominateColors($pngLogo);
+            imagedestroy($pngLogo);
+
+            $bg_hsls = [
+                [183, 48, 83],
+                [169, 15, 68],
+                [201, 10, 53],
+                [195, 14, 50],
+                [200, 20, 46],
+                [133, 7, 72],
+                [167, 10, 54],
+                [179, 16, 47],
+                [135, 13, 52],
+                [138, 16, 73]
+            ];
+
+            $ret = [];
+            foreach ($dominantColors as $idx => $dominantColor) {
+                list($h, $s, $l) = rgbToHsl($dominantColor['r'], $dominantColor['g'], $dominantColor['b']);
+                $bg_imgs = [];
+                for ($i = 0; $i < 10; $i++) {
+                    $orgpath = plugin_dir_path(__FILE__) . 'images' . DIRECTORY_SEPARATOR . 'bg_templates' . DIRECTORY_SEPARATOR . 'bg (' . ($i + 1) . ').jpg';
+                    $image = new Imagick($orgpath);
+                    $image->modulateImage( /* ($l * 10000 / $bg_hsls[$i][2] - 100) / 10 +  */100, ($s * 10000 / $bg_hsls[$i][1] - 100) / (9 * $s * $s + 1) + 100, 100 + ($h - $bg_hsls[$i][0]) * 5 / 9);
+                    
+                    /* $image->transformImageColorspace(Imagick::COLORSPACE_HSL);
+                    //$hueChannel->evaluateImage(Imagick::EVALUATE_MULTIPLY, 0.3);
+                    //$hueChannel->evaluateImage(Imagick::EVALUATE_ADD, $h / 360 - 0.15);
+                    //$saturationChannel->evaluateImage(Imagick::EVALUATE_MULTIPLY, ($s * 100 / $bg_hsls[$i][1] - 1) / 2 + 1);
+                    //$valueChannel->evaluateImage(Imagick::EVALUATE_MULTIPLY, ($l * 100 / $bg_hsls[$i][2] - 1) / 2 + 1);
+
+
+                    $hue = $image->clone();
+                    $saturation = $image->clone();
+                    $lightness = $image->clone();
+                    $hue->separateImageChannel(Imagick::CHANNEL_RED);
+                    $saturation->separateImageChannel(Imagick::CHANNEL_GREEN);
+                    $lightness->separateImageChannel(Imagick::CHANNEL_BLUE);
+                    $hue->fxImage("(u*0.3)+0.9");
+                    $saturation->fxImage("u*2.0");
+                    $combined = new Imagick();
+                    $combined->addImage($hue);
+                    $combined->addImage($saturation);
+                    $combined->addImage($lightness);
+                    $combined = $combined->combineImages(Imagick::CHANNEL_ALL);
+                    $combined->clear();
+                    $combined->destroy();
+                    //$image->separateImageChannel(Imagick::CHANNEL_RED);
+
+                    // Apply the `fxImage` method to modify the red channel
+                    // The equivalent formula to "u+0.1" is applied here
+                    //$combined = $image->fxImage('u+0.5');
+
+                    // Recombine the channels to get the full-color image
+                    $hue->setImageColorspace(Imagick::COLORSPACE_SRGB);
+                    $saturation->setImageColorspace(Imagick::COLORSPACE_SRGB);
+                    $lightness->setImageColorspace(Imagick::COLORSPACE_SRGB);
+                    $combined = new Imagick();
+                    $combined->newImage($image->getImageWidth(), $image->getImageHeight(), new ImagickPixel('gray'));
+                    $combined->setImageColorspace(Imagick::COLORSPACE_SRGB);
+                    //$combined->compositeImage($lightness, Imagick::COMPOSITE_LIGHTEN, 0, 0);
+                    $combined->compositeImage($hue, Imagick::COMPOSITE_HUE, 0, 0);
+                    //$combined->compositeImage($saturation, Imagick::COMPOSITE_SATURATE, 0, 0);*/
+
+
+                    $newfilename = 'bg-theme' . ($idx + 1) . '-' . ($i + 1) . '.jpg';
+                    $newpath = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'bg_temp' . DIRECTORY_SEPARATOR . $newfilename;
+                    /* $image->setImageFormat('jpg');  */
+                    $image->writeImage($newpath);
+
+                    /* $hue->clear();
+                    $hue->destroy();
+                    $saturation->clear();
+                    $saturation->destroy();
+                    $lightness->clear();
+                    $lightness->destroy(); */
+                    $image->clear();
+                    $image->destroy();
+                    /* $combined->clear();
+                    $combined->destroy(); */
+                    array_push($bg_imgs, $newfilename);
+                }
+                array_push($ret, ['color' => $dominantColor, 'imgs' => $bg_imgs]);
+            }
+
+            echo json_encode($ret);
+
+            die;
+        }
+    } else {
+        echo 'Image does not exist!';
+        die;
+    }
+}
+add_action('wp_ajax_handle_logo_upload_ajax', 'handle_logo_upload_ajax');
+add_action('wp_ajax_nopriv_handle_logo_upload_ajax', 'handle_logo_upload_ajax');
 
 // handle post
 function handle_image_upload_ajax()
@@ -138,6 +273,11 @@ function handle_image_upload_ajax()
         //$pngLogo = imagecreatefrompng($uploads[1]['file']);
         $jpgImage = resize_image_to_fit($uploads[0]['file'], 1000, 1000, 1);
         $pngLogo = resize_image_to_fit($uploads[1]['file'], 200, 200, 0);
+        // TEST start
+        modulate($jpgImage, 1.15, 2.37, 142);
+        $dominantColors = extractDominateColors($pngLogo);
+        echo json_encode($dominantColors);
+        // TEST end
         $jpgWidth = imagesx($jpgImage);
         $jpgHeight = imagesy($jpgImage);
         $logoWidth = imagesx($pngLogo);
@@ -216,7 +356,7 @@ function handle_image_upload_ajax()
             }
         }
 
-        echo "success";
+        //echo "success";
     } else {
         echo "Error creating post.";
     }
@@ -285,6 +425,247 @@ function resize_image_to_fit($file_path, $max_width, $max_height, $mode = 0)
     return $dst_image;
 }
 
+function modulate(&$image, $brightnessFactor, $saturationFactor, $hueRotation)
+{
+    $width = imagesx($image);
+    $height = imagesy($image);
+
+    for ($x = 0; $x < $width; $x++) {
+        for ($y = 0; $y < $height; $y++) {
+            $idx = imagecolorat($image, $x, $y);
+            $rgb = imagecolorsforindex($image, $idx);
+
+            // Convert RGB to HSL
+            list($h, $s, $l) = rgbToHsl($rgb['red'], $rgb['green'], $rgb['blue']);
+
+            // Rotate the hue
+            $h += $hueRotation;
+            if ($h > 360) {
+                $h -= 360;
+            } elseif ($h < 0) {
+                $h += 360;
+            }
+
+            // Adjust saturation and brightness
+            $s = max(0, min(1, $s * $saturationFactor));
+            $l = max(0, min(1, $l * $brightnessFactor));
+
+            // Convert back to RGB
+            list($newR, $newG, $newB) = hslToRgb($h, $s, $l);
+
+            // Apply the new color
+            $newColor = imagecolorallocate($image, $rgb['red'], $rgb['green'], $rgb['blue']);
+            imagesetpixel($image, $x, $y, $newColor);
+        }
+    }
+}
+
+function extractDominateColors($image)
+{
+    $width = imagesx($image);
+    $height = imagesy($image);
+
+    $smallImage = imagecreatetruecolor(100, 100);
+    imagealphablending($smallImage, false);
+    imagesavealpha($smallImage, true);
+    imagecopyresampled($smallImage, $image, 0, 0, 0, 0, 100, 100, $width, $height);
+
+    // Extract colors and count frequencies, omitting transparent pixels
+    $colors = [];
+    for ($y = 0; $y < 100; $y++) {
+        for ($x = 0; $x < 100; $x++) {
+            $idx = imagecolorat($smallImage, $x, $y);
+            $rgba = imagecolorsforindex($smallImage, $idx);
+
+            // Skip fully transparent pixels
+            if ($rgba['alpha'] === 127) {
+                continue;
+            }
+            // Skip Gray colors
+            /* $min = min($rgba['red'], $rgba['green'], $rgba['blue']);
+            $max = max($rgba['red'], $rgba['green'], $rgba['blue']);
+            if ($max - $min < 40) {
+                continue;
+            } */
+
+            $colors[] = ['r' => $rgba['red'], 'g' => $rgba['green'], 'b' => $rgba['blue']];
+        }
+    }
+    imagedestroy($smallImage);
+
+    list($clusters, $centroids) = kMeansClustering($colors, 2);
+
+    // Determine monochrome
+
+    // Determine the size of each cluster
+    $clusterSizes = [count($clusters[0]), count($clusters[1])];
+    $sizeDifferenceRatio = min($clusterSizes) / max($clusterSizes);
+
+    // Calculate the distance between the two centroids
+    $colorDifference = calculateColorDistance($centroids[0], $centroids[1]);
+
+    if ($sizeDifferenceRatio < 0.3 || $colorDifference < 0.2) {
+        list($monochromeCluster, $monochromeCentroid) = kMeansClustering($colors, 1);
+        return $monochromeCentroid;
+    } else {
+        return $centroids;
+    }
+}
+
+function kMeansClustering($colors, $k, $maxIter = 10)
+{
+    // Initialize centroids
+    $centroids = initializeCentroids($colors, $k);
+
+    // Main k-means loop
+    for ($i = 0; $i < $maxIter; $i++) {
+        $clusters = array_fill(0, $k, []);
+
+        // Assign each color to the nearest centroid
+        foreach ($colors as $color) {
+            $minDistance = PHP_INT_MAX;
+            $closestCentroidIndex = 0;
+            foreach ($centroids as $index => $centroid) {
+                $distance = calculateColorDistance($color, $centroid);
+                if ($distance < $minDistance) {
+                    $minDistance = $distance;
+                    $closestCentroidIndex = $index;
+                }
+            }
+            $clusters[$closestCentroidIndex][] = $color;
+        }
+
+        // Recalculate centroids
+        $newCentroids = [];
+        foreach ($clusters as $index => $cluster) {
+            $rTotal = $gTotal = $bTotal = $count = 0;
+            foreach ($cluster as $color) {
+                $rTotal += $color['r'];
+                $gTotal += $color['g'];
+                $bTotal += $color['b'];
+                $count++;
+            }
+            if ($count > 0) {
+                $newCentroids[$index] = [
+                    'r' => $rTotal / $count,
+                    'g' => $gTotal / $count,
+                    'b' => $bTotal / $count
+                ];
+            } else {
+                // Handle empty clusters by reinitializing centroids
+                $newCentroids[$index] = $colors[array_rand($colors)];
+            }
+        }
+
+        // Check for convergence
+        if ($centroids === $newCentroids) {
+            break;
+        }
+
+        $centroids = $newCentroids;
+    }
+
+    return [$clusters, $centroids];
+}
+
+// Function to calculate the Euclidean distance between two colors
+function calculateColorDistance($color1, $color2)
+{
+    /* return sqrt(
+        pow($color1['r'] - $color2['r'], 2) +
+            pow($color1['g'] - $color2['g'], 2) +
+            pow($color1['b'] - $color2['b'], 2)
+    ); */
+    list($h1, $s1, $l1) = rgbToHsl($color1['r'], $color1['g'], $color1['b']);
+    list($h2, $s2, $l2) = rgbToHsl($color2['r'], $color2['g'], $color2['b']);
+
+    $hueDifference = min(abs($h1 - $h2), 360 - abs($h1 - $h2)) / 180; // Normalize to [0, 1]
+    $saturationDifference = abs($s1 - $s2);
+    $lightnessDifference = abs($l1 - $l2) * 0.1; // 0.1 is lightness weight
+
+    // You can decide how to weigh these components. Lightness difference is optional.
+    $distance = sqrt(pow($hueDifference, 2) + pow($saturationDifference, 2) + pow($lightnessDifference, 2));
+
+    return $distance;
+}
+
+// Function to convert RGB to HSL
+function rgbToHsl($r, $g, $b)
+{
+    $r /= 255;
+    $g /= 255;
+    $b /= 255;
+    $max = max($r, $g, $b);
+    $min = min($r, $g, $b);
+    $h = 0;
+    $s = 0;
+    $l = ($max + $min) / 2;
+
+    if ($max == $min) {
+        $h = $s = 0; // achromatic
+    } else {
+        $d = $max - $min;
+        $s = $l > 0.5 ? $d / (2 - $max - $min) : $d / ($max + $min);
+        switch ($max) {
+            case $r:
+                $h = ($g - $b) / $d + ($g < $b ? 6 : 0);
+                break;
+            case $g:
+                $h = ($b - $r) / $d + 2;
+                break;
+            case $b:
+                $h = ($r - $g) / $d + 4;
+                break;
+        }
+        $h /= 6;
+    }
+
+    return [$h * 360, $s, $l];
+}
+
+function hslToRgb($h, $s, $l)
+{
+    $h /= 360;
+
+    if ($s == 0) {
+        $r = $g = $b = $l * 255; // achromatic
+    } else {
+        $hue2rgb = function ($p, $q, $t) {
+            if ($t < 0) $t += 1;
+            if ($t > 1) $t -= 1;
+            if ($t < 1 / 6) return $p + ($q - $p) * 6 * $t;
+            if ($t < 1 / 2) return $q;
+            if ($t < 2 / 3) return $p + ($q - $p) * (2 / 3 - $t) * 6;
+            return $p;
+        };
+
+        $q = $l < 0.5 ? $l * (1 + $s) : $l + $s - $l * $s;
+        $p = 2 * $l - $q;
+
+        $r = 255 * $hue2rgb($p, $q, $h + 1 / 3);
+        $g = 255 * $hue2rgb($p, $q, $h);
+        $b = 255 * $hue2rgb($p, $q, $h - 1 / 3);
+    }
+
+    return [round($r), round($g), round($b)];
+}
+
+// Function to initialize centroids using random selection or k-means++
+function initializeCentroids($colors, $k)
+{
+    $centroids = [];
+
+    // Random initialization: pick k random colors
+    for ($i = 0; $i < $k; $i++) {
+        $centroids[] = $colors[array_rand($colors)];
+    }
+
+    // Optionally, implement k-means++ for better initialization
+
+    return $centroids;
+}
+
+// Gallery
 function display_image_posts_with_pagination($atts)
 {
     ob_start();
@@ -379,7 +760,8 @@ function enqueue_gallery_scripts()
 }
 add_action('wp_enqueue_scripts', 'enqueue_gallery_scripts');
 
-function handle_delete_post() {
+function handle_delete_post()
+{
     // Verify the nonce for security
     $nonce = $_POST['_wpnonce'];
     $post_id = intval($_POST['post_id']);
@@ -400,7 +782,8 @@ function handle_delete_post() {
 }
 add_action('wp_ajax_delete_post', 'handle_delete_post');
 
-function custom_delete_post_attachments($post_id) {
+function custom_delete_post_attachments($post_id)
+{
     // Check if the post type supports thumbnails
     if (has_post_thumbnail($post_id)) {
         // Get the thumbnail ID
