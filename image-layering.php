@@ -107,6 +107,8 @@ function handle_logo_upload_ajax()
                 [138, 16, 73]
             ];
 
+            $temppath = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'bg_temp';
+            wp_mkdir_p($temppath);
             $ret = [];
             foreach ($dominantColors as $idx => $dominantColor) {
                 list($h, $s, $l) = rgbToHsl($dominantColor['r'], $dominantColor['g'], $dominantColor['b']);
@@ -157,7 +159,7 @@ function handle_logo_upload_ajax()
 
 
                     $newfilename = 'bg-theme' . ($idx + 1) . '-' . ($i + 1) . '.jpg';
-                    $newpath = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'bg_temp' . DIRECTORY_SEPARATOR . $newfilename;
+                    $newpath = $temppath . DIRECTORY_SEPARATOR . $newfilename;
                     /* $image->setImageFormat('jpg');  */
                     $image->writeImage($newpath);
 
