@@ -34,7 +34,8 @@
     width: 80%;
 }
 
-.step1 #drag-and-drop-wrapper1 {
+.step1 #drag-and-drop-wrapper1,
+.step2 #drag-and-drop-wrapper1 {
     background: white;
     border-color: transparent;
     border-radius: 0;
@@ -121,6 +122,9 @@
 
 #image-preview-container1 img {
     object-fit: cover;
+    position: absolute;
+    left: 0;
+    top: 0;
 }
 
 #image-preview-container2 img {
@@ -151,7 +155,7 @@
     position: absolute;
     color: white;
     right: 0;
-    min-width: 30%;
+    width: 30%;
     top: 10%;
     font-size: 1.2em;
     padding: 0.5em 1.5em;
@@ -159,50 +163,88 @@
     border: lightgray dashed 2px;
     border-top-left-radius: 100px;
     border-bottom-left-radius: 100px;
+    text-overflow: ellipsis;
+}
+
+.pack-ctrl {
+    position: absolute;
+    display: none;
+    right: 0;
+    width: 15%;
+    font-size: 1.1em;
+    background: #0000004f;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+#category-name-ribbon:hover~.pack-ctrl,
+.pack-ctrl:hover {
+    display: block;
+}
+
+#pack-new-btn {
+    top: 10%;
+}
+
+#pack-del-btn {
+    top: 13%;
+}
+
+#drag-and-drop-container:not(.step2) .pack-ctrl {
+    display: none !important;
 }
 
 /**
-* Background image select panel
+* Navigator panel
 */
-#bg-sel-container {
+#navigator-container {
     flex-grow: 0;
     flex-shrink: 0;
     display: flex;
     flex-wrap: wrap;
     width: 0%;
     transition: .3s;
-    overflow: hidden;
     margin-top: 30px;
     align-content: flex-start;
 }
 
-.bg-choice-theme {
+.bg-choice-theme,
+.pack-choice-title {
     flex-grow: 0;
     flex-shrink: 0;
     width: 100%;
     text-align: center;
     margin-bottom: 7.5px;
     color: white;
+    background: #005f8d;
     cursor: pointer;
 }
 
-.bg-choice-theme.active {
+.bg-choice-theme.active,
+.pack-choice-title.active {
+    background: #0073aa;
     box-shadow: 0px 0 9px 0 #000000ab;
 }
 
-.bg-choice-img-container {
+.bg-choice-img-container,
+.pack-file-container {
     flex-grow: 0;
     flex-shrink: 0;
     width: 100%;
     display: none;
     flex-wrap: wrap;
+    margin-bottom: 10px;
 }
 
-.bg-choice-img-container.active {
+.bg-choice-img-container.active,
+.pack-file-container.active {
     display: flex;
 }
 
-.bg-choice-img {
+.bg-choice-img,
+.pack-file-img,
+.pack-file-csv {
     flex-grow: 0;
     flex-shrink: 0;
     width: 50%;

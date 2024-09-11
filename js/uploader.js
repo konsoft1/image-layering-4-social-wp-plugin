@@ -1,6 +1,9 @@
+var step = 0;
+
 jQuery(document).ready(function ($) {
-    var imageFile;
+    var packFiles = [];
     var logoFile;
+
     let btn = $('#next-step-btn');
     btn.prop('disabled', true);
 
@@ -22,12 +25,8 @@ jQuery(document).ready(function ($) {
         e.stopPropagation();
         $(this).removeClass('dragging');
 
-        var files = e.originalEvent.dataTransfer.files;
-
-        imageFile = files[0];
-        previewImage(imageFile, 1);
-
-        btn.prop('disabled', !(logoFile && logoFile));
+        let files = e.originalEvent.dataTransfer.files;
+        onLoadFiles(files);
     });
 
     $('#drag-and-drop-area2').on('drop', function (e) {
@@ -40,7 +39,7 @@ jQuery(document).ready(function ($) {
         logoFile = files[0];
         previewImage(logoFile, 2);
 
-        btn.prop('disabled', !(logoFile && logoFile));
+        btn.prop('disabled', !logoFile);
 
         uploadLogoFile();
     });
@@ -56,15 +55,12 @@ jQuery(document).ready(function ($) {
     });
 
     $('#image_file1').on('change', function () {
-        var files = this.files;
-        imageFile = files[0];
-        previewImage(imageFile, 1);
-
-        btn.prop('disabled', !(logoFile && logoFile));
+        let files = this.files;
+        onLoadFiles(files);
     });
 
     $('#image_file2').on('change', function () {
-        var files = this.files;
+        let files = this.files;
         logoFile = files[0];
         previewImage(logoFile, 2);
 
@@ -72,6 +68,41 @@ jQuery(document).ready(function ($) {
 
         uploadLogoFile();
     });
+
+    function onLoadFiles(files) {
+
+        let id = $('.pack-choice-title.active').prop('id');
+        id = id.substring(id.length - 1) * 1;
+        let idx = packs.indexOf(id);
+
+        let imageFile = null;
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].name.substring(files[i].name.length - 4) == '.jpg') {
+                imageFile = files[i];
+                break;
+            }
+        }
+        if (imageFile != null)
+            previewImage(imageFile, 1);
+
+        btn.prop('disabled', false);
+
+        for (let i = 0; i < files.length; i++) {
+            let file = files[i];
+            packFiles[idx].push(file);
+            if (file.name.substring(file.name.length - 4) == '.jpg') {
+                let reader = new FileReader();
+                if (file) {
+                    reader.onload = function (e) {
+                        $('#pack-file-container' + id).append(`<img class="pack-file-img" src="${e.target.result}" onclick="selectImg(this)">`);
+                    }
+                    reader.readAsDataURL(file);
+                }
+            }
+            else if (file.name.substring(file.name.length - 4) == '.csv')
+                $('#pack-file-container' + id).append('<img class="pack-file-csv" src="/wp-content/plugins/image-layering/images/csv.svg" onclick="selectCsv(this)">');
+        }
+    }
 
     // Preview selected images
     function previewImage(file, idx) {
@@ -109,28 +140,29 @@ jQuery(document).ready(function ($) {
             success: function (response) {
                 let themes = [];
                 themes = JSON.parse(response);
+                $('#navigator-container').html('');
                 themes.forEach((theme, idx) => {
-                    $('#bg-sel-container').append('<div id="bg-choice-theme' + idx + '" class="bg-choice-theme ' + (idx == 0 ? 'active' : '') + '" style="background: rgb(' + Math.round(theme.color.r) + ',' + Math.round(theme.color.g) + ',' + Math.round(theme.color.b) + ');" onclick="selectTheme(' + idx + ')">Theme ' + (idx + 1) + '</div>');
-                });
-                themes.forEach((theme, idx) => {
-                    $('#bg-sel-container').append('<div id="bg-choice-img-container' + idx + '" class="bg-choice-img-container ' + (idx == 0 ? 'active' : '') + '"></div>');
+                    $('#navigator-container').append('<div id="bg-choice-theme' + idx + '" class="bg-choice-theme ' + (idx == 0 ? 'active' : '') + '" style="background: rgb(' + Math.round(theme.color.r) + ',' + Math.round(theme.color.g) + ',' + Math.round(theme.color.b) + ');" onclick="selectTheme(' + idx + ')">Theme ' + (idx + 1) + '</div>');
+                    $('#navigator-container').append('<div id="bg-choice-img-container' + idx + '" class="bg-choice-img-container ' + (idx == 0 ? 'active' : '') + '"></div>');
                     theme.imgs.forEach(img => {
                         $('#bg-choice-img-container' + idx).append('<img class="bg-choice-img" src="/wp-content/uploads/bg_temp/' + img + '" onclick="selectBg(this)">');
                     });
                 });
-                $('#drag-and-drop-wrapper2').css('border-color', 'transparent');
 
+                $('#drag-and-drop-wrapper2').css('border-color', 'transparent');
                 $('#category-name-ribbon').css('background', $('#bg-choice-theme0').css('background'));
                 $('#category-name-ribbon').css('border-color', 'transparent');
+
+                $('#drag-and-drop-container').css('font-size', $('#drag-and-drop-container')[0].clientHeight / 50 + 'px');
+
+                updateNextBtnStatus();
             },
             error: function (xhr, status, error) {
             }
         });
 
-        $('#drag-and-drop-container').css('font-size', $('#drag-and-drop-container')[0].clientHeight * 0.8 / 50 + 'px');
-
         $('#drag-and-drop-container').css('width', '80%');
-        $('#bg-sel-container').css('width', '20%');
+        $('#navigator-container').css('width', '20%');
     }
 
     $('#brand-promise-input').on('change', function (e) {
@@ -139,19 +171,86 @@ jQuery(document).ready(function ($) {
 
     $('#next-step-btn').on('click', async function (e) {
         e.preventDefault();
-        var $button = $(this);
+        if (step == 0)
+            return;
+        else if (step == 1) {
+            toSecondStep();
+            return;
+        }
+        else if (step == 2) {
+            publish(this);
+            return;
+        }
+    });
+
+    var packs = [];
+
+    function toSecondStep() {
+        step = 2;
+
+        $('#drag-and-drop-container').removeClass('step1');
+        $('#drag-and-drop-container').addClass('step2');
+
+        $('#next-step-btn').prop('disabled', true);
+        $('#next-step-btn').text('Publish >');
+
+        $('#navigator-container').html('');
+        $('#navigator-container').append('<div id="pack-choice-title0" class="pack-choice-title active" onclick="selectPack(0)">New Pack</div>');
+        $('#navigator-container').append('<div id="pack-file-container0" class="pack-file-container active"></div>');
+
+        $('#category-name-ribbon').val('New Pack');
+        $('#image-preview-container1').text('Drag & Drop or Click here to add JPEG images or CSV files consisting some sentences.');
+        packs.push(0);
+        packFiles.push([]);
+
+        $('#category-name-ribbon').on('change', function () {
+            $('.pack-choice-title.active').text($('#category-name-ribbon').val());
+        });
+
+        $('#pack-new-btn').on('click', function (e) {
+            e.preventDefault();
+
+            let idx = packs[packs.length - 1] + 1;
+            $('#navigator-container').append('<div id="pack-choice-title' + idx + '" class="pack-choice-title active" onclick="selectPack(' + idx + ')">New Pack</div>');
+            $('#navigator-container').append('<div id="pack-file-container' + idx + '" class="pack-file-container active"></div>');
+            packs.push(idx);
+            packFiles.push([]);
+
+            selectPack(idx);
+        });
+
+        $('#pack-del-btn').on('click', function (e) {
+            e.preventDefault();
+
+            if (packs.length == 1) return;
+
+            let id = $('.pack-choice-title.active').prop('id');
+            let idx = packs.indexOf(id.substring(id.length - 1) * 1);
+
+            $('.pack-choice-title.active').remove();
+            $('.pack-file-container.active').remove();
+            packs.splice(idx, 1);
+            packFiles.splice(idx, 1);
+
+            selectPack(packs[0]);
+        });
+    }
+
+    function publish(btn) {
+        return;
+        var $button = $(btn);
         $button.prop('disabled', true);
 
         var formData = new FormData();
-        formData.append('image_files[]', imageFile);
-        formData.append('image_files[]', logoFile);
+        formData.append('files[]', packFiles);
+        formData.append('packs[]', packs);
+        formData.append('packnames[]', packnames);
+        formData.append('logo', logopath);
+        formData.append('back', backsrc);
+        formData.append('brand', brand);
         formData.append('action', 'handle_image_upload_ajax');
         formData.append('nonce', custom_ajax_object.nonce);
 
-        /* const response = await fetch(custom_ajax_object.ajax_url, {
-            method: 'POST',
-            body: formData
-        }); */
         $.ajax({
             url: custom_ajax_object.ajax_url,
             type: 'POST',
@@ -170,15 +269,17 @@ jQuery(document).ready(function ($) {
             error: function (xhr, status, error) {
             }
         });
-    });
+    }
 });
 
 function selectBg(img) {
+    step = 1;
+
     jQuery('#image-preview-container0').css('background-image', "url('" + img.src + "')");
     jQuery('#drag-and-drop-container').css('borderColor', 'transparent');
     jQuery('#drag-and-drop-container').addClass('step1');
     jQuery('#image-preview-container1').text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.');
-    
+
     updateNextBtnStatus();
 }
 
@@ -195,4 +296,23 @@ function selectTheme(idx) {
 
 function updateNextBtnStatus() {
     jQuery('#next-step-btn').prop('disabled', !jQuery('#drag-and-drop-container').hasClass('step1') || jQuery('#brand-promise-input').val() == '');
+}
+
+function selectPack(idx) {
+    jQuery('.pack-choice-title').removeClass('active');
+    jQuery('#pack-choice-title' + idx).addClass('active');
+
+    jQuery('.pack-file-container').removeClass('active');
+    jQuery('#pack-file-container' + idx).addClass('active');
+
+    jQuery('#category-name-ribbon').val(jQuery('.pack-choice-title.active').text());
+}
+
+function selectImg(img) {
+    var imgHtml = `<img src="${img.src}">`;
+    jQuery('#image-preview-container1').html(imgHtml);
+}
+
+function selectCsv(file) {
+    jQuery('#image-preview-container1').text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.');
 }

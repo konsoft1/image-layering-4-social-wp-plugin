@@ -29,10 +29,12 @@ function image_layering_form_shortcode()
                     <input type="file" id="image_file2" class="image_file" name="logo_file" style="display: none;" accept="image/png">
                 </div>
                 <input id="brand-promise-input" type="text" class="" placeholder="Input Brand Promise">
-                <span id="category-name-ribbon">Category Name</span>
+                <input id="category-name-ribbon" type="text" value="Package Name">
+                <button id="pack-new-btn" class="pack-ctrl">+ New</button>
+                <button id="pack-del-btn" class="pack-ctrl">&times; Delete</button>
                 <button id="next-step-btn">Next Step ></button>
             </div>
-            <div id="bg-sel-container"></div>
+            <div id="navigator-container"></div>
         </div>
 
         <?php wp_nonce_field('user_post_action', 'user_post_nonce'); ?>
@@ -158,7 +160,7 @@ function handle_logo_upload_ajax()
                     //$combined->compositeImage($saturation, Imagick::COMPOSITE_SATURATE, 0, 0);*/
 
 
-                    $newfilename = 'bg-theme' . ($idx + 1) . '-' . ($i + 1) . '.jpg';
+                    $newfilename = 'bg-theme' . ($idx + 1) . '-' . ($i + 1) . '-rgb(' . round($dominantColor['r']) . ',' . round($dominantColor['g']) . ',' . round($dominantColor['b']) . ').jpg';
                     $newpath = $temppath . DIRECTORY_SEPARATOR . $newfilename;
                     /* $image->setImageFormat('jpg');  */
                     $image->writeImage($newpath);
