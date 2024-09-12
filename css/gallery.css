@@ -15,6 +15,8 @@
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 2px 2px 4px 0 #00000036;
+    display: flex;
+    flex-direction: column;
 }
 
 @media screen and (max-width: 1500px) {
@@ -51,7 +53,7 @@
 .post-thumbnail img {
     width: 100%;
     height: auto;
-    aspect-ratio: 1;
+    aspect-ratio: 0.8;
     object-fit: contain;
     background: wheat;
 }
@@ -64,12 +66,18 @@
     display: block;
     font-size: 20px;
     font-weight: 500;
-    padding: 16px 20px 12px;
+    padding: 16px 20px 0;
     margin: 0;
+}
+
+.post-packname {
+    text-align: right;
 }
 
 .post-content {
     display: flex;
+    flex-grow: 1;
+    align-items: flex-start;
 }
 
 .post-images {

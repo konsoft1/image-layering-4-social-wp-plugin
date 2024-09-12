@@ -283,7 +283,7 @@ function handle_image_upload_ajax()
 
                 if ($post_id) {
                     $newfilepath = composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packname, $upload['file']);
-                    
+
                     wp_set_post_terms($post_id, $packname, 'post_tag', true);
                     add_post_meta($post_id, 'brand_promise',  $brand, true);
 
@@ -549,7 +549,7 @@ add_action('wp_ajax_nopriv_handle_image_upload_ajax', 'handle_image_upload_ajax'
 function composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packname, $content_filepath, $text = '')
 {
     $isTxt = $content_filepath == '';
-    
+
     $bgWidth = 1080;
     $bgHeight = 1350;
     $logoWidth = $isTxt ? 250 : 160;
@@ -987,7 +987,7 @@ function display_image_posts_with_pagination($atts)
                 </div>
                 <h4 class="post-title"><!-- <a href="<?php the_permalink(); ?>"> --><?php the_title(); ?></h4>
                 <div class="post-content">
-                    <div class="post-images">
+                    <!-- <div class="post-images">
                         <?php
                         $attachments = array_keys(get_attached_media('image', get_the_ID()));
                         echo '<img src="' . esc_url(wp_get_attachment_image_src($attachments[0], 'thumbnail')[0]) . '" />';
@@ -998,20 +998,21 @@ function display_image_posts_with_pagination($atts)
                         //echo '<span>=</span>';
                         //echo wp_get_attachment_image($attachments[2], 'full', false, array('class' => 'flexible-image'));
                         ?>
-                    </div>
+                    </div> -->
                     <div class="post-excerpt">
+                        <?php the_tags('<p class="post-packname">', '', '</p>'); ?>
                         <?php the_excerpt(); ?>
-                        <div class="post-controls">
-                            <a href="<?= get_the_post_thumbnail_url() ?>" download>Download</a>
-                            <?php
-                            if (current_user_can('delete_posts')) :
-                            ?>
-                                <a class="post-delete" data-post-id="<?php the_ID(); ?>" data-nonce="<?php echo wp_create_nonce('delete_post_' . get_the_ID()); ?>">Delete</a>
-                            <?php
-                            endif
-                            ?>
-                        </div>
                     </div>
+                </div>
+                <div class="post-controls">
+                    <a href="<?= get_the_post_thumbnail_url() ?>" download>Download</a>
+                    <?php
+                    if (current_user_can('delete_posts')) :
+                    ?>
+                        <a class="post-delete" data-post-id="<?php the_ID(); ?>" data-nonce="<?php echo wp_create_nonce('delete_post_' . get_the_ID()); ?>">Delete</a>
+                    <?php
+                    endif
+                    ?>
                 </div>
             </div>
 <?php
