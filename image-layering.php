@@ -119,7 +119,7 @@ function handle_logo_upload_ajax()
                     $orgpath = plugin_dir_path(__FILE__) . 'images' . DIRECTORY_SEPARATOR . 'bg_templates' . DIRECTORY_SEPARATOR . 'bg (' . ($i + 1) . ').jpg';
                     $image = new Imagick($orgpath);
                     $image->modulateImage( /* ($l * 10000 / $bg_hsls[$i][2] - 100) / 10 +  */100, ($s * 10000 / $bg_hsls[$i][1] - 100) / (9 * $s * $s + 1) + 100, 100 + ($h - $bg_hsls[$i][0]) * 5 / 9);
-                    
+
                     /* $image->transformImageColorspace(Imagick::COLORSPACE_HSL);
                     //$hueChannel->evaluateImage(Imagick::EVALUATE_MULTIPLY, 0.3);
                     //$hueChannel->evaluateImage(Imagick::EVALUATE_ADD, $h / 360 - 0.15);
@@ -180,7 +180,11 @@ function handle_logo_upload_ajax()
                 array_push($ret, ['color' => $dominantColor, 'imgs' => $bg_imgs]);
             }
 
-            echo json_encode($ret);
+            echo json_encode([
+                'status' => 'success',
+                'logo' => wp_make_link_relative($upload['url']),
+                'data' => $ret
+            ]);
 
             die;
         }
@@ -199,6 +203,179 @@ function handle_image_upload_ajax()
     /* if (!isset($_POST['user_post_nonce']) || !wp_verify_nonce($_POST['user_post_nonce'], 'user_post_action')) {
         return;
     } */
+    if (!check_ajax_referer('custom-ajax-nonce', 'nonce'))
+        die;
+
+    // Include necessary files for media handling
+    if (!function_exists('wp_handle_upload')) {
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+    }
+
+    if (!function_exists('media_handle_sideload')) {
+        require_once(ABSPATH . 'wp-admin/includes/media.php');
+    }
+
+    if (!function_exists('wp_generate_attachment_metadata')) {
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+    }
+
+    $logo_filepath = isset($_POST['logo']) ? ABSPATH . $_POST['logo'] : '';
+    $theme_color = isset($_POST['theme']) ? explode(',', substr($_POST['theme'], 4, -1)) : [0, 0, 0];
+    $bg_filepath = isset($_POST['bg']) ? ABSPATH . wp_make_link_relative(substr($_POST['bg'], 6, -3)) : '';
+    $brand = isset($_POST['brand']) ? $_POST['brand'] : '';
+    $packs = isset($_POST['packs']) ? $_POST['packs'] : [];
+
+    foreach ($packs as $idx => $packname) {
+        //$rand_texts = file(WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'phrase-text.csv', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        //$rand_text = $rand_texts[rand(0, count($rand_texts) - 1)];
+
+        $uploads = [];
+        $upload_errors = [];
+
+        // Handle file uploads
+        for ($i = 0; $i < count($_FILES["pack_files" . $idx]['name']); $i++) {
+            if (!empty($_FILES["pack_files" . $idx]['name'][$i])) {
+                //$file = $_FILES["pack_files" . $idx][$i];
+                $file = [
+                    'name' => $_FILES["pack_files" . $idx]['name'][$i],
+                    'type' => $_FILES["pack_files" . $idx]['type'][$i],
+                    'tmp_name' => $_FILES["pack_files" . $idx]['tmp_name'][$i],
+                    'error' => $_FILES["pack_files" . $idx]['error'][$i],
+                    'size' => $_FILES["pack_files" . $idx]['size'][$i],
+                ];
+
+                // Check for upload errors
+                if ($file['error'] !== 0) {
+                    $upload_errors[] = "Error uploading file $i." . $file['error'];
+                    continue;
+                }
+
+                $upload = wp_handle_upload($file, array('test_form' => false));
+                if (isset($upload['error'])) {
+                    $upload_errors[] = "Error uploading file $i: " . $upload['error'];
+                } else {
+                    $uploads[] = $upload;
+                }
+            } else {
+                echo 'Image does not exist!';
+                die;
+            }
+        }
+
+        if (!empty($upload_errors)) {
+            foreach ($upload_errors as $error) {
+                echo $error . '<br>';
+            }
+            die;
+        }
+
+        foreach ($uploads as $upload) {
+            if ($upload['type'] == 'image/jpeg') {
+                // Insert post into the database
+                $post_id = wp_insert_post(array(
+                    'post_title'   => basename($logo_filepath, '.png') . ' + ' . basename($upload['file'], '.jpg'),
+                    'post_content' => basename($logo_filepath, '.png') . ' + ' . $brand . ' + ' . $packname . ' + ' . basename($upload['file'], '.jpg'),
+                    'post_status'  => 'publish',
+                    'post_author'  => get_current_user_id(),
+                    'post_type'    => 'post', // Change to your custom post type if needed
+                    'post_category' => array(get_cat_ID('Image Layering'))
+                ));
+
+                if ($post_id) {
+                    $newfilepath = composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packname, $upload['file']);
+                    
+                    wp_set_post_terms($post_id, $packname, 'post_tag', true);
+                    add_post_meta($post_id, 'brand_promise',  $brand, true);
+
+                    // Attach uploaded images to the post
+                    /* $attachment_id = media_handle_sideload(array(
+                        'name' => basename($upload['file']),
+                        'tmp_name' => $upload['file']
+                    ), $post_id);
+
+                    if (is_wp_error($attachment_id)) {
+                        echo "Error attaching image: " . $attachment_id->get_error_message();
+                    } */
+                    wp_delete_file($upload['file']);
+
+                    $attachment_id = media_handle_sideload(array(
+                        'name' => basename($newfilepath),
+                        'tmp_name' => $newfilepath
+                    ), $post_id);
+
+                    if (is_wp_error($attachment_id)) {
+                        echo "Error attaching image: " . $attachment_id->get_error_message();
+                    } else {
+                        // Optionally set the first image as the post thumbnail
+                        if (!has_post_thumbnail($post_id)) {
+                            set_post_thumbnail($post_id, $attachment_id);
+                        }
+                    }
+
+                    //echo "success";
+                } else {
+                    //echo "Error creating post.";
+                }
+            } else if ($upload['type'] == 'text/csv') {
+                $texts = file($upload['file'], FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+                foreach ($texts as $i => $text) {
+
+                    // Insert post into the database
+                    $post_id = wp_insert_post(array(
+                        'post_title'   => basename($logo_filepath, '.png') . ' + ' . basename($upload['file']) . '(' . $i . ')',
+                        'post_content' => $text,
+                        'post_status'  => 'publish',
+                        'post_author'  => get_current_user_id(),
+                        'post_type'    => 'post', // Change to your custom post type if needed
+                        'post_category' => array(get_cat_ID('Image Layering'))
+                    ));
+
+                    if ($post_id) {
+                        $newfilepath = composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packname, '', $text);
+
+                        wp_set_post_terms($post_id, $packname, 'post_tag', true);
+                        add_post_meta($post_id, 'brand_promise',  $brand, true);
+
+                        // Attach uploaded images to the post
+                        /* $attachment_id = media_handle_sideload(array(
+                            'name' => basename($upload['file']),
+                            'tmp_name' => $upload['file']
+                        ), $post_id);
+
+                        if (is_wp_error($attachment_id)) {
+                            echo "Error attaching image: " . $attachment_id->get_error_message();
+                        } */
+
+                        $attachment_id = media_handle_sideload(array(
+                            'name' => basename($newfilepath),
+                            'tmp_name' => $newfilepath
+                        ), $post_id);
+
+                        if (is_wp_error($attachment_id)) {
+                            echo "Error attaching image: " . $attachment_id->get_error_message();
+                        } else {
+                            // Optionally set the first image as the post thumbnail
+                            if (!has_post_thumbnail($post_id)) {
+                                set_post_thumbnail($post_id, $attachment_id);
+                            }
+                        }
+
+                        //echo "success";
+                    } else {
+                        //echo "Error creating post.";
+                    }
+                }
+
+                wp_delete_file($upload['file']);
+            }
+        }
+    }
+    echo 'success';
+    die;
+}
+/* function handle_image_upload_ajax()
+{
     if (!check_ajax_referer('custom-ajax-nonce', 'nonce'))
         die;
 
@@ -365,9 +542,116 @@ function handle_image_upload_ajax()
         echo "Error creating post.";
     }
     die;
-}
+} */
 add_action('wp_ajax_handle_image_upload_ajax', 'handle_image_upload_ajax');
 add_action('wp_ajax_nopriv_handle_image_upload_ajax', 'handle_image_upload_ajax');
+
+function composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packname, $content_filepath, $text = '')
+{
+    $isTxt = $content_filepath == '';
+    
+    $bgWidth = 1080;
+    $bgHeight = 1350;
+    $logoWidth = $isTxt ? 250 : 160;
+    $logoHeight = $logoWidth;
+    $contentWidth = $isTxt ? 810 : 910;
+    $contentHeight = $isTxt ? 895 : 910;
+    $bgImg = resize_image_to_fit($bg_filepath, $bgWidth, $bgHeight, 1);
+    $logoImg = resize_image_to_fit($logo_filepath, $logoWidth, $logoHeight, 0);
+    $logoX = ($bgWidth - $contentWidth) / 2;
+    $logoY = $isTxt ? 20 : 40;
+    $contentX = ($bgWidth - $contentWidth) / 2;
+    $contentY = $isTxt ? 285 : 235;
+    $fontFile = plugin_dir_path(__FILE__) . 'font/OpenSans-Regular.ttf'; // Path to a TrueType font file
+    $boldFontFile = plugin_dir_path(__FILE__) . 'font/OpenSans-Bold.ttf'; // Path to a TrueType font file
+
+    // Merge the PNG logo onto the JPG image
+    imagecopy($bgImg, $logoImg, $logoX, $logoY, 0, 0, $logoWidth, $logoHeight);
+
+    // Draw white content background
+    $contentBgColor = imagecolorallocate($bgImg, 255, 255, 255);
+    imagefilledrectangle($bgImg, $contentX, $contentY, $contentX + $contentWidth, $contentY + $contentHeight, $contentBgColor);
+
+    // Draw main content
+    if (!$isTxt) {
+        // Draw image content
+        $contentMargin = 15;
+        $contentImgX = $contentX + $contentMargin;
+        $contentImgY = $contentY + $contentMargin;
+        $contentImgW = $contentWidth - $contentMargin * 2;
+        $contentImgH = $contentHeight - $contentMargin * 2;
+        $contentImg = resize_image_to_fit($content_filepath, $contentImgW, $contentImgH, 1);
+        imagecopy($bgImg, $contentImg, $contentImgX, $contentImgY, 0, 0, $contentImgW, $contentImgH);
+    } else {
+        // Draw text content
+        $fontSize = 70; // Font size in points
+        $margin = 63;
+
+        // Calculate word wrap
+        $lines = [];
+        $words = explode(' ', $text);
+        $line = '';
+        foreach ($words as $word) {
+            $testLine = $line . ' ' . $word;
+            $box = imagettfbbox($fontSize, 0, $boldFontFile, $testLine);
+            if ($box[2] > $contentWidth - $margin * 2) {
+                $lines[] = trim($line);
+                $line = $word;
+            } else {
+                $line = $testLine;
+            }
+        }
+        $lines[] = trim($line);
+        $lineGap = ($contentHeight - $margin * 2.5) / count($lines);
+
+        // Add the text to the image
+        $textColor = imagecolorallocate($bgImg, $theme_color[0], $theme_color[1], $theme_color[2]);
+        for ($i = 0; $i < count($lines); $i++) {
+            $line = $lines[$i];
+            $bbox = imagettfbbox($fontSize, 0, $boldFontFile, $line);
+            $textWidth = $bbox[2] - $bbox[0];
+            $textHeight = $bbox[1] - $bbox[7];
+            $textX = ($bgWidth - $textWidth) / 2;
+            $textY = $contentY + $margin + $lineGap * ($i + 1) - ($lineGap - $fontSize) / 2;
+            imagettftext($bgImg, $fontSize, 0, (int) $textX, (int) $textY, $textColor, $boldFontFile, $line);
+        }
+    }
+
+    // Draw Brand Promise Text
+    $textColor = imagecolorallocate($bgImg, 255, 255, 255); // Calculate text bounding box dimensions
+    $bottomH = $bgHeight - $contentY - $contentHeight;
+    $fontSize = 65;
+    $marginBottom = ($bottomH - $fontSize) * 7 / 12;
+    $bbox = imagettfbbox($fontSize, 0, $fontFile, $brand);
+    $textWidth = $bbox[2] - $bbox[0];
+    $textHeight = $bbox[1] - $bbox[7];
+    $textX = ($bgWidth - $textWidth) / 2;
+    $textY = $bgHeight - $marginBottom;
+    imagettftext($bgImg, $fontSize, 0, (int) $textX, (int) $textY, $textColor, $fontFile, $brand);
+
+    // Draw Pack Title Bar
+    $barColor = imagecolorallocate($bgImg, $theme_color[0], $theme_color[1], $theme_color[2]);
+    $barR = $isTxt ? 46 : 35;
+    $barX1 = $isTxt ? 716 : 810;
+    $barY1 = $isTxt ? 118 : 90;
+    $barX2 = $bgWidth;
+    $barY2 = $barY1 + $barR * 2;
+    $fontSize = $barR * 2 / 3;
+    imagefilledrectangle($bgImg, $barX1, $barY1, $barX2, $barY2, $barColor);
+    imagefilledarc($bgImg, $barX1, $barY1 + $barR, $barR * 2, $barR * 2, 90, 270, $barColor, IMG_ARC_PIE);
+    imagettftext($bgImg, $fontSize, 0, (int) $barX1 + $barR / 4, (int) $barY2 - $barR * 2 / 3, $textColor, $fontFile, $packname);
+
+    // Save the final image as a new file
+    $newfilename = basename($bg_filepath) . '.new.jpg';
+    $newfilepath = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $newfilename;
+    imagejpeg($bgImg, $newfilepath, 100); // 100 is the quality percentage
+
+    // Free up memory
+    imagedestroy($bgImg);
+    imagedestroy($logoImg);
+
+    return $newfilepath;
+}
 
 /**
  * $mode: 0-contain, 1-cover

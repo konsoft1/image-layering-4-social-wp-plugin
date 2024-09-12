@@ -139,7 +139,12 @@ jQuery(document).ready(function ($) {
             contentType: false,
             success: function (response) {
                 let themes = [];
-                themes = JSON.parse(response);
+                response = JSON.parse(response);
+                themes = response.data;
+
+                var imgHtml = `<img src="${response.logo}">`;
+                $('#image-preview-container2').html(imgHtml);
+
                 $('#navigator-container').html('');
                 themes.forEach((theme, idx) => {
                     $('#navigator-container').append('<div id="bg-choice-theme' + idx + '" class="bg-choice-theme ' + (idx == 0 ? 'active' : '') + '" style="background: rgb(' + Math.round(theme.color.r) + ',' + Math.round(theme.color.g) + ',' + Math.round(theme.color.b) + ');" onclick="selectTheme(' + idx + ')">Theme ' + (idx + 1) + '</div>');
@@ -237,17 +242,21 @@ jQuery(document).ready(function ($) {
     }
 
     function publish(btn) {
-        return;
         var $button = $(btn);
         $button.prop('disabled', true);
 
         var formData = new FormData();
-        formData.append('files[]', packFiles);
-        formData.append('packs[]', packs);
-        formData.append('packnames[]', packnames);
-        formData.append('logo', logopath);
-        formData.append('back', backsrc);
-        formData.append('brand', brand);
+        formData.append('logo', $('#image-preview-container2 img').attr('src'));
+        formData.append('theme', $('#category-name-ribbon').css('background-color'));
+        formData.append('bg', $('#image-preview-container0').css('background-image'));
+        formData.append('brand', $('#brand-promise-input').val());
+        for (let i = 0; i < packs.length; i++) {
+            if (packFiles[i].length == 0) continue;
+            formData.append('packs[]', $('#pack-choice-title' + packs[i]).text());
+            for (let j = 0; j < packFiles[i].length; j++)
+                formData.append('pack_files' + i + '[]', packFiles[i][j]);
+        }
+
         formData.append('action', 'handle_image_upload_ajax');
         formData.append('nonce', custom_ajax_object.nonce);
 
@@ -258,11 +267,11 @@ jQuery(document).ready(function ($) {
             processData: false,
             contentType: false,
             success: function (response) {
-                let chromes = [];
+                /* let chromes = [];
                 chromes = JSON.parse(response);
                 chromes.forEach(chrome => {
                     $('#drag-and-drop-container').append('<div style="background: rgb(' + Math.round(chrome.r) + ',' + Math.round(chrome.g) + ',' + Math.round(chrome.b) + ');width:100%;height:30px;"></div>');
-                });
+                }); */
                 if (response == 'success')
                     location.reload();
             },
