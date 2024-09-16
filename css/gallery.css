@@ -149,7 +149,7 @@
     text-align: center;
 }
 
-.pagination-container span {
+.pagination-container span.current {
     background-color: gray;
     width: 20px;
     color: white;

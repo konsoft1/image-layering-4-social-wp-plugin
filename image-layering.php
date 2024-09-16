@@ -14,14 +14,14 @@ function image_layering_form_shortcode()
         <div id="image-edit-container">
             <div id="drag-and-drop-container">
                 <div id="image-preview-container0" class="image-preview-container"></div>
-                <div id="drag-and-drop-wrapper1" class="drag-and-drop-wrapper">
+                <div id="drag-and-drop-wrapper1" class="drag-and-drop-wrapper disabled">
                     <div id="drag-and-drop-area1" class="drag-and-drop-area">
                         <!-- <span class="explain"><span><b>Background</b>(.jpg)<br>(1000x1000)</span><br>Drag &amp; Drop<br>or<br>Click</span> -->
                         <div id="image-preview-container1" class="image-preview-container"></div>
                     </div>
                     <input type="file" id="image_file1" class="image_file" name="image_file" style="display: none;" accept="image/jpeg">
                 </div>
-                <div id="drag-and-drop-wrapper2" class="drag-and-drop-wrapper">
+                <div id="drag-and-drop-wrapper2" class="drag-and-drop-wrapper current-step-focus">
                     <div id="drag-and-drop-area2" class="drag-and-drop-area">
                         <span class="explain"><span><b>Logo</b>(.png)<br>(200x200)</span><br>Drag &amp; Drop<br>or<br>Click</span>
                         <div id="image-preview-container2" class="image-preview-container"></div>
@@ -29,12 +29,15 @@ function image_layering_form_shortcode()
                     <input type="file" id="image_file2" class="image_file" name="logo_file" style="display: none;" accept="image/png">
                 </div>
                 <input id="brand-promise-input" type="text" class="" placeholder="Input Brand Promise">
-                <input id="category-name-ribbon" type="text" value="Package Name">
-                <button id="pack-new-btn" class="pack-ctrl">+ New</button>
+                <input id="category-name-ribbon" type="text" value="Package Name" disabled>
+                <button id="pack-new-btn" class="pack-ctrl" disabled>+ New</button>
                 <button id="pack-del-btn" class="pack-ctrl">&times; Delete</button>
                 <button id="next-step-btn">Next Step ></button>
             </div>
-            <div id="navigator-container"></div>
+            <div id="navigator-container">
+                <div class="spinner"></div>
+                <div class="spinner-text">Processing...</div>
+            </div>
         </div>
 
         <?php wp_nonce_field('user_post_action', 'user_post_nonce'); ?>
@@ -637,9 +640,9 @@ function composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packn
     $barX2 = $bgWidth;
     $barY2 = $barY1 + $barR * 2;
     $fontSize = $barR * 2 / 3;
-    imagefilledrectangle($bgImg, $barX1, $barY1, $barX2, $barY2, $barColor);
-    imagefilledarc($bgImg, $barX1, $barY1 + $barR, $barR * 2, $barR * 2, 90, 270, $barColor, IMG_ARC_PIE);
-    imagettftext($bgImg, $fontSize, 0, (int) $barX1 + $barR / 4, (int) $barY2 - $barR * 2 / 3, $textColor, $fontFile, $packname);
+    imagefilledrectangle($bgImg, $barX1, $barY1, $barX2, $barY2, $isTxt ? $textColor : $barColor);
+    imagefilledarc($bgImg, $barX1, $barY1 + $barR, $barR * 2, $barR * 2, 90, 270, $isTxt ? $textColor : $barColor, IMG_ARC_PIE);
+    imagettftext($bgImg, $fontSize, 0, (int) $barX1 + $barR / 4, (int) $barY2 - $barR * 2 / 3, $isTxt ? $barColor : $textColor, $fontFile, $packname);
 
     // Save the final image as a new file
     $newfilename = basename($bg_filepath) . '.new.jpg';

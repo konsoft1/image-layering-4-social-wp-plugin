@@ -25,6 +25,8 @@ jQuery(document).ready(function ($) {
         e.stopPropagation();
         $(this).removeClass('dragging');
 
+        if ($(this).parent().hasClass('disabled')) return;
+
         let files = e.originalEvent.dataTransfer.files;
         onLoadFiles(files);
     });
@@ -34,18 +36,22 @@ jQuery(document).ready(function ($) {
         e.stopPropagation();
         $(this).removeClass('dragging');
 
+        if ($(this).parent().hasClass('disabled')) return;
+
         var files = e.originalEvent.dataTransfer.files;
 
         logoFile = files[0];
         previewImage(logoFile, 2);
 
-        btn.prop('disabled', !logoFile);
+        //btn.prop('disabled', !logoFile);
 
         uploadLogoFile();
     });
 
     // Handle file selection
     $('.drag-and-drop-area').on('click', function (e) {
+        if ($(this).parent().hasClass('disabled')) return;
+
         $(this).parent().find('.image_file').trigger('click');
         document.querySelector('.success-message, .error-message')?.remove();
     });
@@ -64,7 +70,7 @@ jQuery(document).ready(function ($) {
         logoFile = files[0];
         previewImage(logoFile, 2);
 
-        btn.prop('disabled', !(logoFile && logoFile));
+        //btn.prop('disabled', !(logoFile && logoFile));
 
         uploadLogoFile();
     });
@@ -86,6 +92,7 @@ jQuery(document).ready(function ($) {
             previewImage(imageFile, 1);
 
         btn.prop('disabled', false);
+        $('#navigator-title').removeClass('current-step-focus');
 
         for (let i = 0; i < files.length; i++) {
             let file = files[i];
@@ -114,6 +121,7 @@ jQuery(document).ready(function ($) {
             }
             reader.readAsDataURL(file);
             $('#drag-and-drop-area' + idx + ' .explain').hide();
+            $('#drag-and-drop-wrapper1').removeClass('current-step-focus');
         } else {
             $('#image-preview-container' + idx).html('');
             $('#drag-and-drop-area' + idx + ' .explain').show();
@@ -145,10 +153,12 @@ jQuery(document).ready(function ($) {
                 var imgHtml = `<img src="${response.logo}">`;
                 $('#image-preview-container2').html(imgHtml);
 
+                $('#navigator-container').css('overflow', 'visible');
                 $('#navigator-container').html('');
+                $('#navigator-container').append('<div id="navigator-title" class="current-step-focus">Select theme.</div>');
                 themes.forEach((theme, idx) => {
                     $('#navigator-container').append('<div id="bg-choice-theme' + idx + '" class="bg-choice-theme ' + (idx == 0 ? 'active' : '') + '" style="background: rgb(' + Math.round(theme.color.r) + ',' + Math.round(theme.color.g) + ',' + Math.round(theme.color.b) + ');" onclick="selectTheme(' + idx + ')">Theme ' + (idx + 1) + '</div>');
-                    $('#navigator-container').append('<div id="bg-choice-img-container' + idx + '" class="bg-choice-img-container ' + (idx == 0 ? 'active' : '') + '"></div>');
+                    $('#navigator-container').append('<div id="bg-choice-img-container' + idx + '" class="bg-choice-img-container"></div>');
                     theme.imgs.forEach(img => {
                         $('#bg-choice-img-container' + idx).append('<img class="bg-choice-img" src="/wp-content/uploads/bg_temp/' + img + '" onclick="selectBg(this)">');
                     });
@@ -160,7 +170,7 @@ jQuery(document).ready(function ($) {
 
                 $('#drag-and-drop-container').css('font-size', $('#drag-and-drop-container')[0].clientHeight / 50 + 'px');
 
-                updateNextBtnStatus();
+                $('#drag-and-drop-wrapper2').removeClass('current-step-focus');
             },
             error: function (xhr, status, error) {
             }
@@ -171,7 +181,10 @@ jQuery(document).ready(function ($) {
     }
 
     $('#brand-promise-input').on('change', function (e) {
-        updateNextBtnStatus();
+        $('#brand-promise-input').removeClass('current-step-focus');
+        if (jQuery('#brand-promise-input').val() == '') return;
+        $('#next-step-btn').attr('disabled', false);
+        $('#next-step-btn').addClass('current-step-focus');
     });
 
     $('#next-step-btn').on('click', async function (e) {
@@ -200,16 +213,34 @@ jQuery(document).ready(function ($) {
         $('#next-step-btn').text('Publish >');
 
         $('#navigator-container').html('');
-        $('#navigator-container').append('<div id="pack-choice-title0" class="pack-choice-title active" onclick="selectPack(0)">New Pack</div>');
+        $('#navigator-container').append('<div id="navigator-title" class="current-step-focus">Rename pack.</div>');
+        $('#navigator-container').append('<div id="pack-choice-title0" class="pack-choice-title active disabled" onclick="selectPack(0)">New Pack</div>');
         $('#navigator-container').append('<div id="pack-file-container0" class="pack-file-container active"></div>');
 
+        $('#category-name-ribbon').attr('disabled', false);
         $('#category-name-ribbon').val('New Pack');
         $('#image-preview-container1').text('Drag & Drop or Click here to add JPEG images or CSV files consisting some sentences.');
+
+        $('#next-step-btn').removeClass('current-step-focus');
+        $('#category-name-ribbon').addClass('current-step-focus');
+        $('#category-name-ribbon').on('change', function (e) {
+            $('#category-name-ribbon').removeClass('current-step-focus');
+            $('#navigator-title').text('Selet files.');
+        });
+
         packs.push(0);
         packFiles.push([]);
 
         $('#category-name-ribbon').on('change', function () {
             $('.pack-choice-title.active').text($('#category-name-ribbon').val());
+
+            $('#category-name-ribbon').removeClass('current-step-focus');
+            $('#drag-and-drop-wrapper1').addClass('current-step-focus');
+            $('#navigator-title').text('Import files.');
+
+            $('#drag-and-drop-wrapper1').removeClass('disabled');
+            $('#pack-new-btn').attr('disabled', false);
+            $('.pack-choice-title').removeClass('disabled');
         });
 
         $('#pack-new-btn').on('click', function (e) {
@@ -222,6 +253,18 @@ jQuery(document).ready(function ($) {
             packFiles.push([]);
 
             selectPack(idx);
+
+            $('#image-preview-container1').text('Drag & Drop or Click here to add JPEG images or CSV files consisting some sentences.');
+
+            $('#category-name-ribbon').addClass('current-step-focus');
+            $('#navigator-title').text('Rename pack.');
+            $('#navigator-title').addClass('current-step-focus');
+            $('#drag-and-drop-wrapper1').removeClass('current-step-focus');
+
+            $('#drag-and-drop-wrapper1').addClass('disabled');
+            $('#pack-new-btn').attr('disabled', true);
+            $('#next-step-btn').prop('disabled', true);
+            $('.pack-choice-title').addClass('disabled');
         });
 
         $('#pack-del-btn').on('click', function (e) {
@@ -238,6 +281,11 @@ jQuery(document).ready(function ($) {
             packFiles.splice(idx, 1);
 
             selectPack(packs[0]);
+            
+            $('#drag-and-drop-wrapper1').removeClass('disabled');
+            $('#pack-new-btn').attr('disabled', false);
+            $('#next-step-btn').prop('disabled', false);
+            $('.pack-choice-title').removeClass('disabled');
         });
     }
 
@@ -259,6 +307,8 @@ jQuery(document).ready(function ($) {
 
         formData.append('action', 'handle_image_upload_ajax');
         formData.append('nonce', custom_ajax_object.nonce);
+        
+        $('#navigator-container').html('<div class="spinner"></div><div class="spinner-text">Publishing...</div>');
 
         $.ajax({
             url: custom_ajax_object.ajax_url,
@@ -272,8 +322,12 @@ jQuery(document).ready(function ($) {
                 chromes.forEach(chrome => {
                     $('#drag-and-drop-container').append('<div style="background: rgb(' + Math.round(chrome.r) + ',' + Math.round(chrome.g) + ',' + Math.round(chrome.b) + ');width:100%;height:30px;"></div>');
                 }); */
-                if (response == 'success')
-                    location.reload();
+                if (response == 'success') {
+                    $('#navigator-container').html('<div class="spinner-success">✔</div><div class="spinner-text">Success!</div>');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                }
             },
             error: function (xhr, status, error) {
             }
@@ -287,9 +341,11 @@ function selectBg(img) {
     jQuery('#image-preview-container0').css('background-image', "url('" + img.src + "')");
     jQuery('#drag-and-drop-container').css('borderColor', 'transparent');
     jQuery('#drag-and-drop-container').addClass('step1');
+    jQuery('#drag-and-drop-wrapper2').addClass('disabled');
     jQuery('#image-preview-container1').text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.');
 
-    updateNextBtnStatus();
+    jQuery('#navigator-title').removeClass('current-step-focus');
+    jQuery('#brand-promise-input').addClass('current-step-focus');
 }
 
 function selectTheme(idx) {
@@ -301,13 +357,13 @@ function selectTheme(idx) {
 
     jQuery('#category-name-ribbon').css('background', jQuery('#bg-choice-theme' + idx).css('background'));
     jQuery('#image-preview-container1').css('color', jQuery('#bg-choice-theme' + idx).css('background-color'));
-}
 
-function updateNextBtnStatus() {
-    jQuery('#next-step-btn').prop('disabled', !jQuery('#drag-and-drop-container').hasClass('step1') || jQuery('#brand-promise-input').val() == '');
+    jQuery('#navigator-title').text('Select background.');
 }
 
 function selectPack(idx) {
+    if (jQuery('.pack-choice-title').hasClass('disabled')) return;
+
     jQuery('.pack-choice-title').removeClass('active');
     jQuery('#pack-choice-title' + idx).addClass('active');
 
@@ -315,6 +371,8 @@ function selectPack(idx) {
     jQuery('#pack-file-container' + idx).addClass('active');
 
     jQuery('#category-name-ribbon').val(jQuery('.pack-choice-title.active').text());
+    jQuery('#category-name-ribbon').removeClass('current-step-focus');
+    jQuery('#navigator-title').text('Selet files.');
 }
 
 function selectImg(img) {
