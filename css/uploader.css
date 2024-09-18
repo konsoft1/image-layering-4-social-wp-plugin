@@ -134,7 +134,7 @@
 }
 
 #image-preview-container2 img {
-    object-position: top left;
+    object-position: left;
     object-fit: contain;
 }
 
@@ -354,4 +354,49 @@
     text-align: center;
     align-content: center;
     font-size: 1.7em;
+}
+
+.modal {
+    position: fixed;
+    text-align: center;
+    left: 0;
+    top: calc(50% - 40px);
+    right: 0;
+    background: #c53c3c;
+    color: white;
+    height: 80px;
+    align-content: center;
+    animation: modal-appear .8s cubic-bezier(0.25, 1.25, 0.5, 1);
+}
+
+@keyframes modal-appear {
+    0% {
+        height: 0;
+        top: 50%;
+    }
+    
+    28% {
+        height: 90px;
+        top: calc(50% - 45px);
+    }
+
+    46% {
+        height: 60px;
+        top: calc(50% - 30px);
+    }
+    
+    64% {
+        height: 86px;
+        top: calc(50% - 43px);
+    }
+    
+    82% {
+        height: 70px;
+        top: calc(50% - 35px);
+    }
+
+    100% {
+        height: 80px;
+        top: calc(50% - 40px);
+    }
 }

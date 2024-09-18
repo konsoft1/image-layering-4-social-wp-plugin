@@ -39,6 +39,10 @@ jQuery(document).ready(function ($) {
         if ($(this).parent().hasClass('disabled')) return;
 
         var files = e.originalEvent.dataTransfer.files;
+        if (files[0].type != 'image/png') {
+            showModal('Please choose PNG file!');
+            return;
+        }
 
         logoFile = files[0];
         previewImage(logoFile, 2);
@@ -67,6 +71,10 @@ jQuery(document).ready(function ($) {
 
     $('#image_file2').on('change', function () {
         let files = this.files;
+        if (files[0].type != 'image/png') {
+            showModal('Please choose PNG file!');
+            return;
+        }
         logoFile = files[0];
         previewImage(logoFile, 2);
 
@@ -82,13 +90,24 @@ jQuery(document).ready(function ($) {
         let idx = packs.indexOf(id);
 
         let imageFile = null;
+        let csvFile = false;
         for (let i = 0; i < files.length; i++) {
-            if (files[i].name.substring(files[i].name.length - 4) == '.jpg') {
-                imageFile = files[i];
-                break;
+            if (files[i].type == 'image/jpeg' || files[i].type == 'image/png') {
+                if (imageFile === null)
+                    imageFile = files[i];
+            } else if (files[i].type == 'text/csv') {
+                csvFile = true;
+            } else {
+                showModal('Please choose JPEG, PNG or CSV files!');
+                $('#image_file1').val('');
+                return;
             }
         }
         if (imageFile != null)
+            previewImage(imageFile, 1);
+        else if (csvFile)
+            $('#image-preview-container1').text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.');
+        else
             previewImage(imageFile, 1);
 
         btn.prop('disabled', false);
@@ -97,7 +116,7 @@ jQuery(document).ready(function ($) {
         for (let i = 0; i < files.length; i++) {
             let file = files[i];
             packFiles[idx].push(file);
-            if (file.name.substring(file.name.length - 4) == '.jpg') {
+            if (file.type == 'image/jpeg' || file.type == 'image/png') {
                 let reader = new FileReader();
                 if (file) {
                     reader.onload = function (e) {
@@ -331,6 +350,21 @@ jQuery(document).ready(function ($) {
             },
             error: function (xhr, status, error) {
             }
+        });
+    }
+
+    function showModal(msg) {
+        $(document.body).append('<div id="modal" class="modal"></div>');
+        $('#modal').text(msg);
+        $('#modal').on('click', function(e) {
+            removeModal();
+        });
+        setTimeout(removeModal, 4000);
+    }
+
+    function removeModal() {
+        $('#modal').fadeOut(300, function() {
+            $(this).remove();
         });
     }
 });

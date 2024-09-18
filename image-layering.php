@@ -19,7 +19,7 @@ function image_layering_form_shortcode()
                         <!-- <span class="explain"><span><b>Background</b>(.jpg)<br>(1000x1000)</span><br>Drag &amp; Drop<br>or<br>Click</span> -->
                         <div id="image-preview-container1" class="image-preview-container"></div>
                     </div>
-                    <input type="file" id="image_file1" class="image_file" name="image_file" style="display: none;" accept="image/jpeg">
+                    <input type="file" id="image_file1" class="image_file" name="image_file" style="display: none;" accept="image/jpeg, image/png, text/csv" multiple>
                 </div>
                 <div id="drag-and-drop-wrapper2" class="drag-and-drop-wrapper current-step-focus">
                     <div id="drag-and-drop-area2" class="drag-and-drop-area">
@@ -273,11 +273,11 @@ function handle_image_upload_ajax()
         }
 
         foreach ($uploads as $upload) {
-            if ($upload['type'] == 'image/jpeg') {
+            if ($upload['type'] == 'image/jpeg' || $upload['type'] == 'image/png') {
                 // Insert post into the database
                 $post_id = wp_insert_post(array(
-                    'post_title'   => basename($logo_filepath, '.png') . ' + ' . basename($upload['file'], '.jpg'),
-                    'post_content' => basename($logo_filepath, '.png') . ' + ' . $brand . ' + ' . $packname . ' + ' . basename($upload['file'], '.jpg'),
+                    'post_title'   => basename($logo_filepath, '.png') . ' + ' . basename($upload['file']),
+                    'post_content' => basename($logo_filepath, '.png') . ' + ' . $brand . ' + ' . $packname . ' + ' . basename($upload['file']),
                     'post_status'  => 'publish',
                     'post_author'  => get_current_user_id(),
                     'post_type'    => 'post', // Change to your custom post type if needed
@@ -681,12 +681,15 @@ function resize_image_to_fit($file_path, $max_width, $max_height, $mode = 0)
     $max_ratio = $max_width / $max_height;
 
     if ($mode == 0) { // contain
+        $dst_x = 0;
         if ($src_ratio > $max_ratio) {
             $new_width = $max_width;
             $new_height = $max_width / $src_ratio;
+            $dst_y = ($max_height - $new_height) / 2;
         } else {
             $new_width = $max_height * $src_ratio;
             $new_height = $max_height;
+            $dst_y = 0;
         }
         $src_x = 0;
         $src_y = 0;
@@ -702,16 +705,20 @@ function resize_image_to_fit($file_path, $max_width, $max_height, $mode = 0)
             $src_x = 0;
             $src_y = intval(($max_width / $src_ratio - $max_height) / 2);
         }
+        $dst_x = 0;
+        $dst_y = 0;
     }
 
-    $dst_image = imagecreatetruecolor($new_width, $new_height);
+    $dst_image = imagecreatetruecolor($max_width, $max_height);
 
     if ($src_type == IMAGETYPE_PNG) {
         imagealphablending($dst_image, false);
+        $transparentColor = imagecolorallocatealpha($dst_image, 0, 0, 0, 127);
+        imagefill($dst_image, 0, 0, $transparentColor);
         imagesavealpha($dst_image, true);
     }
 
-    imagecopyresampled($dst_image, $src_image, 0, 0, $src_x, $src_y, $new_width, $new_height, $src_width - 2 * $src_x, $src_height - 2 * $src_y);
+    imagecopyresampled($dst_image, $src_image, $dst_x, $dst_y, $src_x, $src_y, $new_width, $new_height, $src_width - 2 * $src_x, $src_height - 2 * $src_y);
 
     return $dst_image;
 }
