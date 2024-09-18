@@ -157,6 +157,10 @@
     border-color: transparent;
 }
 
+input:is(:-webkit-autofill, :autofill) {
+    transition: background-color 0s 600000s, color 0s 600000s !important;
+}
+
 #category-name-ribbon {
     position: absolute;
     color: white;
@@ -374,7 +378,7 @@
         height: 0;
         top: 50%;
     }
-    
+
     28% {
         height: 90px;
         top: calc(50% - 45px);
@@ -384,12 +388,12 @@
         height: 60px;
         top: calc(50% - 30px);
     }
-    
+
     64% {
         height: 86px;
         top: calc(50% - 43px);
     }
-    
+
     82% {
         height: 70px;
         top: calc(50% - 35px);
