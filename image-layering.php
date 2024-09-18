@@ -180,6 +180,13 @@ function handle_logo_upload_ajax()
                     $combined->destroy(); */
                     array_push($bg_imgs, $newfilename);
                 }
+
+                $l = $l < 0.5 ? $l : 0.5;
+                list($newR, $newG, $newB) = hslToRgb($h, $s, $l);
+                $dominantColor['r'] = $newR;
+                $dominantColor['g'] = $newG;
+                $dominantColor['b'] = $newB;
+
                 array_push($ret, ['color' => $dominantColor, 'imgs' => $bg_imgs]);
             }
 
@@ -272,6 +279,30 @@ function handle_image_upload_ajax()
             die;
         }
 
+        // Analize logo back brightness
+        $backL = extractMeanBrightness($bg_filepath, 85, 40, 160, 160);
+        $logoL = extractMeanBrightness($logo_filepath);
+        if ($logoL > $backL && $logoL - $backL < 0.15) {
+            if ($logoL > 0.5) $lAdj1 = 'burnx1';
+            else $lAdj1 = 'dodgex2';
+        } else if ($logoL < $backL && $backL - $logoL < 0.15) {
+            if ($backL > 0.5) $lAdj1 = 'burnx2';
+            else $lAdj1 = 'dodgex1';
+        } else {
+            $lAdj1 = '';
+        }
+
+        $backL = extractMeanBrightness($bg_filepath, 135, 20, 250, 250);
+        if ($logoL > $backL && $logoL - $backL < 0.15) {
+            if ($logoL > 0.5) $lAdj2 = 'burnx1';
+            else $lAdj2 = 'dodgex2';
+        } else if ($logoL < $backL && $backL - $logoL < 0.15) {
+            if ($backL > 0.5) $lAdj2 = 'burnx2';
+            else $lAdj2 = 'dodgex1';
+        } else {
+            $lAdj2 = '';
+        }
+
         foreach ($uploads as $upload) {
             if ($upload['type'] == 'image/jpeg' || $upload['type'] == 'image/png') {
                 // Insert post into the database
@@ -285,7 +316,9 @@ function handle_image_upload_ajax()
                 ));
 
                 if ($post_id) {
-                    $newfilepath = composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packname, $upload['file']);
+
+                    // Compose image
+                    $newfilepath = composeImage($bg_filepath, $logo_filepath, $lAdj1, $brand, $theme_color, $packname, $upload['file']);
 
                     wp_set_post_terms($post_id, $packname, 'post_tag', true);
                     add_post_meta($post_id, 'brand_promise',  $brand, true);
@@ -335,7 +368,9 @@ function handle_image_upload_ajax()
                     ));
 
                     if ($post_id) {
-                        $newfilepath = composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packname, '', $text);
+
+                        // Compose image
+                        $newfilepath = composeImage($bg_filepath, $logo_filepath, $lAdj2, $brand, $theme_color, $packname, '', $text);
 
                         wp_set_post_terms($post_id, $packname, 'post_tag', true);
                         add_post_meta($post_id, 'brand_promise',  $brand, true);
@@ -549,7 +584,67 @@ function handle_image_upload_ajax()
 add_action('wp_ajax_handle_image_upload_ajax', 'handle_image_upload_ajax');
 add_action('wp_ajax_nopriv_handle_image_upload_ajax', 'handle_image_upload_ajax');
 
-function composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packname, $content_filepath, $text = '')
+function extractMeanBrightness($imgpath, $x = 0, $y = 0, $w = 0, $h = 0)
+{
+    $image_info = getimagesize($imgpath);
+    $src_type = $image_info[2];
+
+    if (!$x && !$y && !$w && !$h) {
+        $w = $image_info[0];
+        $h = $image_info[1];
+    }
+
+    switch ($src_type) {
+        case IMAGETYPE_JPEG:
+            $image = imagecreatefromjpeg($imgpath);
+            break;
+        case IMAGETYPE_PNG:
+            $image = imagecreatefrompng($imgpath);
+            break;
+        default:
+            return 0;
+    }
+
+    $totalBrightness = 0;
+    $pixelCount = 0;
+
+    for ($i = $x; $i < $x + $w; $i++) {
+        for ($j = $y; $j < $y + $h; $j++) {
+            $rgb = imagecolorat($image, $i, $j);
+
+            $r = ($rgb >> 16) & 0xFF;
+            $g = ($rgb >> 8) & 0xFF;
+            $b = $rgb & 0xFF;
+
+            if ($src_type == IMAGETYPE_PNG) {
+                $alpha = ($rgb & 0x7F000000) >> 24;
+
+                $opacity = 127 - $alpha;
+
+                if ($opacity == 0) {
+                    continue;
+                }
+            }
+
+            $brightness = (0.299 * $r + 0.587 * $g + 0.114 * $b);
+
+            $totalBrightness += $brightness;
+            $pixelCount++;
+        }
+    }
+
+    if ($pixelCount > 0) {
+        $meanBrightness = $totalBrightness / $pixelCount;
+    } else {
+        $meanBrightness = 0;
+    }
+
+    imagedestroy($image);
+
+    return $meanBrightness / 255;
+}
+
+function composeImage($bg_filepath, $logo_filepath, $lAdj, $brand, $theme_color, $packname, $content_filepath, $text = '')
 {
     $isTxt = $content_filepath == '';
 
@@ -567,6 +662,11 @@ function composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packn
     $contentY = $isTxt ? 285 : 235;
     $fontFile = plugin_dir_path(__FILE__) . 'font/OpenSans-Regular.ttf'; // Path to a TrueType font file
     $boldFontFile = plugin_dir_path(__FILE__) . 'font/OpenSans-Bold.ttf'; // Path to a TrueType font file
+
+    if ($lAdj != '') {
+        $lAdjImg = imagecreatefrompng(plugin_dir_path(__FILE__) . 'images' . DIRECTORY_SEPARATOR . $lAdj . '.png');
+        imagecopy($bgImg, $lAdjImg, $logoX + $logoWidth / 2 - 983 / 2, $logoY + $logoHeight / 2 - 986 / 2, 0, 0, 983, 986);
+    }
 
     // Merge the PNG logo onto the JPG image
     imagecopy($bgImg, $logoImg, $logoX, $logoY, 0, 0, $logoWidth, $logoHeight);
@@ -605,7 +705,7 @@ function composeImage($bg_filepath, $logo_filepath, $brand, $theme_color, $packn
             }
         }
         $lines[] = trim($line);
-        $lineGap = ($contentHeight - $margin * 2.5) / count($lines);
+        $lineGap = ($contentHeight - $margin * 2.2) / count($lines);
 
         // Add the text to the image
         $textColor = imagecolorallocate($bgImg, $theme_color[0], $theme_color[1], $theme_color[2]);
