@@ -204,6 +204,13 @@ jQuery(document).ready(function ($) {
         //$('#navigator-container').css('width', '20%');
     }
 
+    $('#brand-promise-input').on('keydown', function(e) {
+        if (e.keyCode == 13) {
+            e.preventDefault();
+            $(this).change();
+        }
+    });
+
     $('#brand-promise-input').on('change', function (e) {
         $('#brand-promise-input').removeClass('current-step-focus');
         if ($('#brand-promise-input').val() == '') {
