@@ -96,7 +96,7 @@ jQuery(document).ready(function ($) {
             if (files[i].type == 'image/jpeg' || files[i].type == 'image/png') {
                 if (imageFile === null)
                     imageFile = files[i];
-            } else if (files[i].type == 'text/csv') {
+            } else if (files[i].name.endsWith('.csv')) {
                 csvFile = true;
             } else {
                 showModal('Please choose JPEG, PNG or CSV files!');
@@ -125,7 +125,7 @@ jQuery(document).ready(function ($) {
                     reader.readAsDataURL(file);
                 }
             }
-            else if (file.name.substring(file.name.length - 4) == '.csv')
+            else if (file.name.endsWith('.csv'))
                 $('#pack-file-container' + id).append('<img class="pack-file-csv" src="/wp-content/plugins/image-layering/images/csv.svg" onclick="selectCsv(this)">');
         }
     }
