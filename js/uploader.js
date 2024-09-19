@@ -155,7 +155,7 @@ jQuery(document).ready(function ($) {
         formData.append('nonce', custom_ajax_object.nonce);
         
         $('#image-preview-container1').html('<div class="spinner"></div><div class="spinner-text">Processing...</div>');
-        $('#navigator-container').html('<div class="spinner"></div>');
+        $('#navigator-title').text('Processing logo file...');
 
         /* const response = await fetch(custom_ajax_object.ajax_url, {
             method: 'POST',
