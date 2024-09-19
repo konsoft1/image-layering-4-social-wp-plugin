@@ -17,7 +17,9 @@ function image_layering_form_shortcode()
                 <div id="drag-and-drop-wrapper1" class="drag-and-drop-wrapper disabled">
                     <div id="drag-and-drop-area1" class="drag-and-drop-area">
                         <!-- <span class="explain"><span><b>Background</b>(.jpg)<br>(1000x1000)</span><br>Drag &amp; Drop<br>or<br>Click</span> -->
-                        <div id="image-preview-container1" class="image-preview-container"></div>
+                        <div id="image-preview-container1" class="image-preview-container">
+                            <img src="/wp-content/plugins/image-layering/images/step_inst/1_logo.png">
+                        </div>
                     </div>
                     <input type="file" id="image_file1" class="image_file" name="image_file" style="display: none;" accept="image/jpeg, image/png, text/csv" multiple>
                 </div>
@@ -35,8 +37,9 @@ function image_layering_form_shortcode()
                 <button id="next-step-btn">Next Step ></button>
             </div>
             <div id="navigator-container">
-                <div class="spinner"></div>
-                <div class="spinner-text">Processing...</div>
+                <div id="navigator-title">Select LOGO PNG file.</div>
+                <!-- <div class="spinner"></div>
+                <div class="spinner-text">Processing...</div> -->
             </div>
         </div>
 

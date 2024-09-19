@@ -67,6 +67,7 @@ jQuery(document).ready(function ($) {
     $('#image_file1').on('change', function () {
         let files = this.files;
         onLoadFiles(files);
+        $(this).val('');
     });
 
     $('#image_file2').on('change', function () {
@@ -99,7 +100,6 @@ jQuery(document).ready(function ($) {
                 csvFile = true;
             } else {
                 showModal('Please choose JPEG, PNG or CSV files!');
-                $('#image_file1').val('');
                 return;
             }
         }
@@ -153,6 +153,9 @@ jQuery(document).ready(function ($) {
         formData.append('image_files[]', logoFile);
         formData.append('action', 'handle_logo_upload_ajax');
         formData.append('nonce', custom_ajax_object.nonce);
+        
+        $('#image-preview-container1').html('<div class="spinner"></div><div class="spinner-text">Processing...</div>');
+        $('#navigator-container').html('<div class="spinner"></div>');
 
         /* const response = await fetch(custom_ajax_object.ajax_url, {
             method: 'POST',
@@ -171,6 +174,8 @@ jQuery(document).ready(function ($) {
 
                 var imgHtml = `<img src="${response.logo}">`;
                 $('#image-preview-container2').html(imgHtml);
+                
+                $('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/2_theme.png">');
 
                 $('#navigator-container').css('overflow', 'visible');
                 $('#navigator-container').html('');
@@ -187,7 +192,7 @@ jQuery(document).ready(function ($) {
                 $('#category-name-ribbon').css('background', $('#bg-choice-theme0').css('background'));
                 $('#category-name-ribbon').css('border-color', 'transparent');
 
-                $('#drag-and-drop-container').css('font-size', $('#drag-and-drop-container')[0].clientHeight / 50 + 'px');
+                //$('#drag-and-drop-container').css('font-size', $('#drag-and-drop-container')[0].clientHeight / 50 + 'px');
 
                 $('#drag-and-drop-wrapper2').removeClass('current-step-focus');
             },
@@ -195,15 +200,22 @@ jQuery(document).ready(function ($) {
             }
         });
 
-        $('#drag-and-drop-container').css('width', '80%');
-        $('#navigator-container').css('width', '20%');
+        //$('#drag-and-drop-container').css('width', '80%');
+        //$('#navigator-container').css('width', '20%');
     }
 
     $('#brand-promise-input').on('change', function (e) {
         $('#brand-promise-input').removeClass('current-step-focus');
-        if (jQuery('#brand-promise-input').val() == '') return;
-        $('#next-step-btn').attr('disabled', false);
-        $('#next-step-btn').addClass('current-step-focus');
+        if ($('#brand-promise-input').val() == '') {
+            $('#next-step-btn').attr('disabled', true);
+            return;
+        }
+        if (step != 2) {
+            $('#next-step-btn').attr('disabled', false);
+            $('#next-step-btn').addClass('current-step-focus');
+            $('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/5_next_step.png">');
+            $('#navigator-title').text('Press Next Step button.');
+        }
     });
 
     $('#next-step-btn').on('click', async function (e) {
@@ -232,19 +244,19 @@ jQuery(document).ready(function ($) {
         $('#next-step-btn').text('Publish >');
 
         $('#navigator-container').html('');
-        $('#navigator-container').append('<div id="navigator-title" class="current-step-focus">Rename pack.</div>');
+        $('#navigator-container').append('<div id="navigator-title">Rename pack.</div>');
         $('#navigator-container').append('<div id="pack-choice-title0" class="pack-choice-title active disabled" onclick="selectPack(0)">New Pack</div>');
         $('#navigator-container').append('<div id="pack-file-container0" class="pack-file-container active"></div>');
 
         $('#category-name-ribbon').attr('disabled', false);
         $('#category-name-ribbon').val('New Pack');
-        $('#image-preview-container1').text('Drag & Drop or Click here to add JPEG images or CSV files consisting some sentences.');
+        $('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/6_new_pack.png">');
 
         $('#next-step-btn').removeClass('current-step-focus');
         $('#category-name-ribbon').addClass('current-step-focus');
         $('#category-name-ribbon').on('change', function (e) {
             $('#category-name-ribbon').removeClass('current-step-focus');
-            $('#navigator-title').text('Selet files.');
+            $('#navigator-title').text('Import files.');
         });
 
         packs.push(0);
@@ -255,11 +267,15 @@ jQuery(document).ready(function ($) {
 
             $('#category-name-ribbon').removeClass('current-step-focus');
             $('#drag-and-drop-wrapper1').addClass('current-step-focus');
-            $('#navigator-title').text('Import files.');
+            if ($('.pack-file-container.active').html() == '') {
+                $('#navigator-title').text('Import files.');
+                $('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/7_files.png">');
+            }
 
             $('#drag-and-drop-wrapper1').removeClass('disabled');
             $('#pack-new-btn').attr('disabled', false);
             $('.pack-choice-title').removeClass('disabled');
+            //$('#image-preview-container1').text('Drag & Drop or Click here to add JPEG images or CSV files consisting some sentences.');
         });
 
         $('#pack-new-btn').on('click', function (e) {
@@ -268,16 +284,16 @@ jQuery(document).ready(function ($) {
             let idx = packs[packs.length - 1] + 1;
             $('#navigator-container').append('<div id="pack-choice-title' + idx + '" class="pack-choice-title active" onclick="selectPack(' + idx + ')">New Pack</div>');
             $('#navigator-container').append('<div id="pack-file-container' + idx + '" class="pack-file-container active"></div>');
+            $('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/6_new_pack.png">');
             packs.push(idx);
             packFiles.push([]);
 
             selectPack(idx);
 
-            $('#image-preview-container1').text('Drag & Drop or Click here to add JPEG images or CSV files consisting some sentences.');
+            $('#image-preview-container1').text('');
 
             $('#category-name-ribbon').addClass('current-step-focus');
             $('#navigator-title').text('Rename pack.');
-            $('#navigator-title').addClass('current-step-focus');
             $('#drag-and-drop-wrapper1').removeClass('current-step-focus');
 
             $('#drag-and-drop-wrapper1').addClass('disabled');
@@ -309,6 +325,14 @@ jQuery(document).ready(function ($) {
     }
 
     function publish(btn) {
+
+        for (let i = 0; i < packs.length; i++) {
+            if (packFiles[i].length == 0) {
+                showModal("There's an empty pack!");
+                return;
+            }
+        }
+
         var $button = $(btn);
         $button.prop('disabled', true);
 
@@ -327,7 +351,8 @@ jQuery(document).ready(function ($) {
         formData.append('action', 'handle_image_upload_ajax');
         formData.append('nonce', custom_ajax_object.nonce);
         
-        $('#navigator-container').html('<div class="spinner"></div><div class="spinner-text">Publishing...</div>');
+        $('#image-preview-container1').html('<div class="spinner"></div><div class="spinner-text">Publishing...</div>');
+        //$('#navigator-container').html('<div class="spinner"></div><div class="spinner-text">Publishing...</div>');
 
         $.ajax({
             url: custom_ajax_object.ajax_url,
@@ -342,7 +367,8 @@ jQuery(document).ready(function ($) {
                     $('#drag-and-drop-container').append('<div style="background: rgb(' + Math.round(chrome.r) + ',' + Math.round(chrome.g) + ',' + Math.round(chrome.b) + ');width:100%;height:30px;"></div>');
                 }); */
                 if (response == 'success') {
-                    $('#navigator-container').html('<div class="spinner-success">✔</div><div class="spinner-text">Success!</div>');
+                    $('#image-preview-container1').html('<div class="spinner-success">✔</div><div class="spinner-text">Success!</div>');
+                    //$('#navigator-container').html('<div class="spinner-success">✔</div><div class="spinner-text">Success!</div>');
                     setTimeout(() => {
                         location.reload();
                     }, 1000);
@@ -376,10 +402,13 @@ function selectBg(img) {
     jQuery('#drag-and-drop-container').css('borderColor', 'transparent');
     jQuery('#drag-and-drop-container').addClass('step1');
     jQuery('#drag-and-drop-wrapper2').addClass('disabled');
-    jQuery('#image-preview-container1').text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.');
+    //jQuery('#image-preview-container1').text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.');
 
     jQuery('#navigator-title').removeClass('current-step-focus');
     jQuery('#brand-promise-input').addClass('current-step-focus');
+    
+    jQuery('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/4_brand_promise.png">');
+    jQuery('#navigator-title').text('Type in Brand Promise.');
 }
 
 function selectTheme(idx) {
@@ -393,6 +422,7 @@ function selectTheme(idx) {
     jQuery('#image-preview-container1').css('color', jQuery('#bg-choice-theme' + idx).css('background-color'));
 
     jQuery('#navigator-title').text('Select background.');
+    jQuery('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/3_background.png">');
 }
 
 function selectPack(idx) {
@@ -406,7 +436,13 @@ function selectPack(idx) {
 
     jQuery('#category-name-ribbon').val(jQuery('.pack-choice-title.active').text());
     jQuery('#category-name-ribbon').removeClass('current-step-focus');
-    jQuery('#navigator-title').text('Selet files.');
+    if (jQuery('.pack-file-container.active').html() == '') {
+        jQuery('#navigator-title').text('Import files.');
+        jQuery('#drag-and-drop-wrapper1').addClass('current-step-focus');
+        jQuery('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/7_files.png">');
+    }
+
+    //jQuery('#image-preview-container1').text('Drag & Drop or Click here to add JPEG images or CSV files consisting some sentences.');
 }
 
 function selectImg(img) {
