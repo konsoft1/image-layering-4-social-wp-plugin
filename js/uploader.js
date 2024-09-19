@@ -262,6 +262,13 @@ jQuery(document).ready(function ($) {
         packs.push(0);
         packFiles.push([]);
 
+        $('#category-name-ribbon').on('keydown', function(e) {
+            if (e.keyCode == 13) {
+                e.preventDefault();
+                $(this).change();
+            }
+        });
+
         $('#category-name-ribbon').on('change', function () {
             $('.pack-choice-title.active').text($('#category-name-ribbon').val());
 
