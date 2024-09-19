@@ -284,7 +284,6 @@ jQuery(document).ready(function ($) {
             let idx = packs[packs.length - 1] + 1;
             $('#navigator-container').append('<div id="pack-choice-title' + idx + '" class="pack-choice-title active" onclick="selectPack(' + idx + ')">New Pack</div>');
             $('#navigator-container').append('<div id="pack-file-container' + idx + '" class="pack-file-container active"></div>');
-            $('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/6_new_pack.png">');
             packs.push(idx);
             packFiles.push([]);
 
@@ -300,6 +299,7 @@ jQuery(document).ready(function ($) {
             $('#pack-new-btn').attr('disabled', true);
             $('#next-step-btn').prop('disabled', true);
             $('.pack-choice-title').addClass('disabled');
+            $('#image-preview-container1').html('<img src="/wp-content/plugins/image-layering/images/step_inst/6_new_pack.png">');
         });
 
         $('#pack-del-btn').on('click', function (e) {
