@@ -800,13 +800,13 @@ function resize_image_to_fit($file_path, $max_width, $max_height, $mode = 0)
         if ($src_ratio > $max_ratio) {
             $new_width = $max_width;
             $new_height = $max_height;
-            $src_x = intval(($max_height * $src_ratio - $max_width) / 2); // Crop from both sides
+            $src_x = intval(($src_width - $src_height * $max_ratio) / 2); // Crop from both sides
             $src_y = 0;
         } else {
             $new_width = $max_width;
             $new_height = $max_height;
             $src_x = 0;
-            $src_y = intval(($max_width / $src_ratio - $max_height) / 2);
+            $src_y = intval(($src_height - $src_width / $max_ratio) / 2);
         }
         $dst_x = 0;
         $dst_y = 0;
